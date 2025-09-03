@@ -1,3 +1,4 @@
+import './sidebar.css'
 import Home from "../sidebar_components/Home";
 import Devices from "../sidebar_components/Devices";
 import Contact_settings from "../sidebar_components/Contact_settings";

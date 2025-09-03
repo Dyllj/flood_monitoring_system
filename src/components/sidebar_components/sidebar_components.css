@@ -1,0 +1,16 @@
+a {
+    text-decoration: none;
+    color: inherit;
+    width: 70%;
+    transition: background 0.2s, transform 0.3s;
+}
+h3 {
+    background-color: lightgray;
+    padding: 10px;
+    border-radius: 10px;
+    text-align: center;
+}
+a:hover {
+    color: #fff;
+    transform: scale(1.05);
+}
