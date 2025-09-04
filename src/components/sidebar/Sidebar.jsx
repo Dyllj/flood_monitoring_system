@@ -1,15 +1,24 @@
 import './sidebar.css'
-import Home from "../sidebar_components/Home";
-import Devices from "../sidebar_components/Devices";
-import Contact_settings from "../sidebar_components/Contact_settings";
-import Logs from "../sidebar_components/Logs";
+import MDRRMOlogo from '../../assets/MDRRMOlogo.png'
+
 function Sidebar() {
   return (
     <div className="sidebar">
-        <Home/>
-        <Devices/>
-        <Contact_settings/>
-        <Logs/>
+      <ul>
+        <li>
+          <a href="#home">Home</a>
+        </li>
+        <li>
+          <a href="#devices">Devices</a>
+        </li>
+        <li>
+          <a href="#contact-settings">Contact Settings</a>
+        </li>
+        <li>
+          <a href="#logs">Logs</a>
+        </li>
+      </ul>
+      <img src={MDRRMOlogo} alt="MDRRMO Logo" className='logo' />
     </div>
   );
 }

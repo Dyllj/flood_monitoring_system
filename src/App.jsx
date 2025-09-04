@@ -1,12 +1,13 @@
 import './App.css'
 import Sidebar from './components/sidebar/sidebar'
-import Header from './components/header/Header'
 
 function App() {
   return (
     <>
+    <header className="app-header">
+      <h1>Flood Monitoring System</h1>
+    </header>
       <Sidebar />
-      <Header />
     </>
   )
 }

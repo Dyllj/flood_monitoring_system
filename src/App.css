@@ -3,3 +3,11 @@
   padding: 0;
   box-sizing: border-box;
 }
+.app-header {
+  background-color: #011627;
+  color: white;
+}
+h1 {
+  text-align: end;
+  padding: 1rem;
+}

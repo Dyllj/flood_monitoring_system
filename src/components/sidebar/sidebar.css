@@ -1,15 +1,40 @@
 .sidebar {
-    background-color: #093FB4;
-    border-right: 1px solid #eee;
-    padding-top:13rem;
-    width: 18rem;
-    height: 100vh;
-    position: fixed;
-    top: 0;
-    left: 0;
-    z-index: 1000;
-    display: flex;
-    flex-direction: column;
-    gap: 4rem;
-    align-items: center;
+    background-color: #011627;
+    border-top: .5px solid white;
+    position: absolute;
+    width: 15rem;
+    height: 91.9vh;
+    padding: 1rem 2rem;
+    gap: 2rem;
+    transition: all 1s ease;
+}
+ul {
+    padding: 0;
+}
+ul li {
+    list-style: none;
+    margin: 1.5rem 0;
+}
+ul li a {
+    color: white;
+    text-decoration: none;
+    font-size: 1.2rem;
+    display: block;
+    padding: .5rem .5rem;
+    border-radius: 0.5rem;
+}
+ul li a:hover,
+ul li a.active {
+    background-color: #062E8C;
+    transition: all .5s;
+}
+img.logo {
+    width: 70%;
+    display: block;
+    margin: auto;
+    margin-top: 45vh;
+    border-radius: 50%;
+    border: 2px solid black;
+    background: white;
+    padding: 0.5rem;
 }
