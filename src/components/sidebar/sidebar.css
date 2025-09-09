@@ -3,10 +3,14 @@
     border-top: .5px solid white;
     position: absolute;
     width: 15rem;
-    height: 91.9vh;
+    height: 92vh;
     padding: 1rem 2rem;
     gap: 2rem;
-    transition: all 1s ease;
+    left: -100%;
+}
+.sidebar.active {   
+    left: 0;
+    transition: all .5s ease;
 }
 ul {
     padding: 0;
@@ -25,7 +29,7 @@ ul li a {
 }
 ul li a:hover,
 ul li a.active {
-    background-color: #062E8C;
+    background-color: #172b4d;
     transition: all .5s;
 }
 img.logo {

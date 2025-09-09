@@ -1,9 +1,9 @@
 import './sidebar.css'
 import MDRRMOlogo from '../../assets/MDRRMOlogo.png'
 
-function Sidebar() {
+function Sidebar({show}) {
   return (
-    <div className="sidebar">
+    <div className={show ? "sidebar active" : "sidebar"}>
       <ul>
         <li>
           <a href="#home">Home</a>
