@@ -33,10 +33,10 @@ ul li a.active {
     transition: all .5s;
 }
 img.logo {
-    width: 70%;
+    width: 60%;
     display: block;
     margin: auto;
-    margin-top: 45vh;
+    margin-top: 40vh;
     border-radius: 50%;
     border: 2px solid black;
     background: white;
