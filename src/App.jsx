@@ -2,7 +2,7 @@ import './App.css'
 import Sidebar from './components/sidebar/Sidebar'
 import { RxHamburgerMenu } from "react-icons/rx";
 import { useState } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Home_contents from './components/sidebar_components/Home_contents';
 import Devices_contents from './components/sidebar_components/Devices_contents';
 import ContactSettings_contents from "./components/sidebar_components/ContactSettings_contents";
@@ -22,6 +22,7 @@ function App() {
           <Sidebar show={isSidebarOpen}/>
           <div className="main">
             <Routes>
+              <Route path="/" element={<Navigate to="/Home_contents" replace />} />
               <Route path='/Home_contents' element={<Home_contents />} />
               <Route path='/Devices_contents' element={<Devices_contents />} />
               <Route path='/ContactSettings_contents' element={<ContactSettings_contents />} /> 

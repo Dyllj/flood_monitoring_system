@@ -10,7 +10,7 @@
 }
 .sidebar.active {   
     left: 0;
-    transition: all .5s ease;
+    transition: all .8s ease;
 }
 ul {
     padding: 0;
