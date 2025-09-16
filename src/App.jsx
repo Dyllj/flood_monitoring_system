@@ -19,7 +19,7 @@ function App() {
             <RxHamburgerMenu onClick={() => setSidebarOpen (!isSidebarOpen)}/>
             <h1>Flood Monitoring System</h1>
           </header>
-          <Sidebar show={isSidebarOpen}/>
+          <Sidebar show={isSidebarOpen} onClose={() => setSidebarOpen(false)} />
           <div className="main">
             <Routes>
               <Route path="/" element={<Navigate to="/Home_contents" replace />} />

@@ -45,3 +45,40 @@ body {
   margin-top: 1.5rem;
   font-size: 2rem;
 }
+
+.add-device-button {
+  position: absolute;
+  bottom: 5%;
+  right: 5%;
+  width: 4.5%;
+  height: 6.6%;;
+  font-size: 3rem;
+  border-radius: 30px;
+  background: #011627;
+  color: white;
+  cursor: pointer;
+}
+
+.add-device-button:hover {
+  background: rgb(1, 22, 39, 0.8);
+  transition: all .3s ease;
+}
+
+.devices_contents2, .contactsettings_contents2, .logs_contents2 {
+  border-top: 3px solid red;
+  display: flex;
+  background: #EBEBEB;
+  box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+}
+
+.devices_contents2 h2, .contactsettings_contents2 h2, .logs_contents2 h2 {
+  font-size: 2rem;
+  font-weight: 900;
+  margin-top: .5rem;
+  align-items: center;
+}
+.devices_contents2 svg, .contactsettings_contents2 svg, .logs_contents2 svg {
+  font-size: 2rem;
+  margin: 1rem 1rem 1rem 6rem;
+  align-items: center;
+}

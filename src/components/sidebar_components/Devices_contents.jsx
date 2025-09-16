@@ -1,13 +1,19 @@
 import './sidebar_contents_styles.css'
+import { IoIosAdd } from "react-icons/io";
+import { ImLocation } from "react-icons/im";
+
 const Devices_contents = () => {
   return (
     <>
       <div className="devices-contents">
       </div>
       <div className="devices_contents2">
-        <h2>Devices Contents</h2>
-        <p>This is the devices contents section.</p>
+        <ImLocation />
+        <h2>Devices Location</h2>
       </div>
+      <button className='add-device-button'>
+        <IoIosAdd />
+      </button>
     </>
   );
 };

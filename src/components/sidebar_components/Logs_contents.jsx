@@ -1,13 +1,16 @@
 import './sidebar_contents_styles.css'
+import { IoIosAdd } from "react-icons/io";
+import { TbLogs } from "react-icons/tb";
 const Logs_contents = () => {
   return (
     <>
     <div className="logs-contents">
     </div>
     <div className="logs_contents2">
-            <h2>Logs Contents</h2>
-      <p>This is the logs contents section.</p>
+      <TbLogs />
+      <h2>Logs</h2>
     </div>
+
     </>
   );
 };
