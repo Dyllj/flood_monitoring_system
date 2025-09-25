@@ -10,7 +10,7 @@ const ContactSettings_contents = () => {
         <RiContactsFill />
         <h2>Contact Settings</h2>
       </div>
-      <button className='add-device-button'>
+      <button className='add-contact-button'>
         <IoIosAdd />
       </button>
     </>

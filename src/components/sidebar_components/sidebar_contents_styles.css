@@ -46,22 +46,27 @@ body {
   font-size: 2rem;
 }
 
-.add-device-button {
+.add-device-button, .add-contact-button {
   position: absolute;
   bottom: 5%;
   right: 5%;
-  width: 4.5%;
-  height: 6.6%;;
+  width: 4%;
+  height: 6%;
+  background-color: #011627;
+  color: #fff;
   font-size: 3rem;
-  border-radius: 30px;
-  background: #011627;
-  color: white;
+  border: none;
   cursor: pointer;
+  border-radius: 50px;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 16px 0 rgba(0,0,0,0.3), 0 6px 20px 0 rgba(0,0,0,0.19);
 }
 
-.add-device-button:hover {
-  background: rgb(1, 22, 39, 0.8);
-  transition: all .3s ease;
+.add-device-button:hover, .add-contact-button:hover {
+  background-color: #3b82f6;
+  border: 1px;
+  box-shadow: 0 8px 24px 0 rgba(59,130,246,0.4), 0 12px 40px 0 rgba(59,130,246,0.19);
+  color: #fff;
 }
 
 .devices_contents2, .contactsettings_contents2, .logs_contents2 {
