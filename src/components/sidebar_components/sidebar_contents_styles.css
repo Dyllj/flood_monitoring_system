@@ -87,3 +87,33 @@ body {
   margin: 1rem 1rem 1rem 6rem;
   align-items: center;
 }
+
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(2px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+}
+
+.modal-container {
+  width: 30rem;
+  height: 30rem;
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0px 5px 15px rgba(0,0,0,0.3);
+  overflow-y: auto;
+}
+
+#modal-container-contacts {
+  width: 40rem;
+  height: 40rem;
+}
