@@ -4,7 +4,7 @@ import { IoIosAdd } from "react-icons/io";
 import { ImLocation } from "react-icons/im";
 import AddDevice from "../add-forms/Add-device";
 
-const Devices_contents = () => {
+const Devices_contents = ({ isAdmin }) => {
   const [showAddDevice, setShowAddDevice] = useState(false);
 
   return (
@@ -16,12 +16,15 @@ const Devices_contents = () => {
         <h2>Devices Location</h2>
       </div>
 
-      <button 
-        className='add-device-button' 
-        onClick={() => setShowAddDevice(true)}
-      >
-        <IoIosAdd />
-      </button>
+      {/* Only Admin sees Add button */}
+      {isAdmin && (
+        <button 
+          className='add-device-button' 
+          onClick={() => setShowAddDevice(true)}
+        >
+          <IoIosAdd />
+        </button>
+      )}
 
       {showAddDevice && (
         <div 
