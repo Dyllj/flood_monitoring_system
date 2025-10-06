@@ -53,3 +53,33 @@ button {
     background-color: #6b1a22ff;
     transition: background-color 0.3s ease;
 }
+
+@media (max-width: 768px) {
+  .login-form {
+    width: 90%;
+    padding: 10px;
+  }
+
+  #login-title {
+    font-size: 1.3rem;
+  }
+
+  .login-actions {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .login-form {
+    width: 95%;
+  }
+
+  #login-title {
+    font-size: 1.1rem;
+  }
+}

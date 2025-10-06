@@ -1,44 +1,92 @@
 .sidebar {
-    background-color: #011627;
-    border-top: .5px solid white;
-    position: absolute;
-    width: 15rem;
-    height: 92vh;
-    padding: 1rem 2rem;
-    gap: 2rem;
-    left: -100%;
+  background-color: #011627;
+  border-top: 0.5px solid white;
+  position: fixed;
+  top: 8vh;
+  left: -100%; /* 👈 Hidden by default */
+  width: 15rem;
+  height: calc(100vh - 8vh);
+  padding: 1rem 2rem;
+  gap: 2rem;
+  transition: all 0.4s ease;
+  z-index: 100;
+  overflow-y: auto;
 }
-.sidebar.active {   
-    left: 0;
-    transition: all .8s ease;
+
+/* When sidebar is active (hamburger clicked) */
+.sidebar.active {
+  left: 0; /* 👈 Slide in from left */
 }
+
+
 ul {
-    padding: 0;
+  padding: 0;
+  margin: 0;
 }
+
 ul li {
-    list-style: none;
-    margin: 1.5rem 0;
+  list-style: none;
+  margin: 1.5rem 0;
 }
+
 ul li a {
-    color: white;
-    text-decoration: none;
-    font-size: 1.2rem;
-    display: block;
-    padding: .5rem .5rem;
-    border-radius: 0.5rem;
+  color: white;
+  text-decoration: none;
+  font-size: 1.2rem;
+  display: block;
+  padding: 0.5rem 0.5rem;
+  border-radius: 0.5rem;
 }
+
 ul li a:hover,
 ul li a.active {
-    background-color: #172b4d;
-    transition: all .5s;
+  background-color: #172b4d;
+  transition: all 0.3s ease;
 }
+
 img.logo {
-    width: 60%;
-    display: block;
-    margin: auto;
-    margin-top: 40vh;
-    border-radius: 50%;
-    border: 2px solid black;
-    background: white;
-    padding: 0.5rem;
+  width: 60%;
+  display: block;
+  margin: 2rem auto 1rem auto;
+  border-radius: 50%;
+  border: 2px solid black;
+  background: white;
+  padding: 0.5rem;
+}
+
+@media (max-width: 1024px) {
+  .sidebar {
+    width: 12rem;
+  }
+
+  ul li a {
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    top: 0;
+    height: 100vh;
+  }
+
+  img.logo {
+    margin-top: 10vh;
+    width: 50%;
+  }
+
+  ul li a {
+    font-size: 1rem;
+    text-align: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .sidebar {
+    width: 10rem;
+  }
+
+  ul li a {
+    font-size: 0.9rem;
+  }
 }

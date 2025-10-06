@@ -50,17 +50,22 @@ body {
   position: absolute;
   bottom: 5%;
   right: 5%;
-  width: 4%;
-  height: 6%;
+  width: 60px;
+  height: 60px;
   background-color: #011627;
   color: #fff;
-  font-size: 3rem;
   border: none;
+  border-radius: 50%;
   cursor: pointer;
-  border-radius: 50px;
+  font-size: 2rem;
+  display: flex;               /* ✅ enables centering */
+  justify-content: center;     /* ✅ centers horizontally */
+  align-items: center;         /* ✅ centers vertically */
   transition: all 0.3s ease;
-  box-shadow: 0 4px 16px 0 rgba(0,0,0,0.3), 0 6px 20px 0 rgba(0,0,0,0.19);
+  box-shadow: 0 4px 16px 0 rgba(0,0,0,0.3),
+              0 6px 20px 0 rgba(0,0,0,0.19);
 }
+
 
 .add-device-button:hover, .add-contact-button:hover {
   background-color: #3b82f6;
@@ -87,7 +92,6 @@ body {
   margin: 1rem 1rem 1rem 6rem;
   align-items: center;
 }
-
 
 .modal-overlay {
   position: fixed;
@@ -116,4 +120,52 @@ body {
 #modal-container-contacts {
   width: 40rem;
   height: 40rem;
+}
+
+/* ✅ Make Add Buttons Scale Down */
+.add-device-button, .add-contact-button {
+  width: 60px;
+  height: 60px;
+  font-size: 2rem;
+}
+
+@media (max-width: 1024px) {
+  .add-device-button, .add-contact-button {
+    width: 50px;
+    height: 50px;
+    font-size: 1.8rem;
+    bottom: 3%;
+    right: 3%;
+  }
+}
+
+@media (max-width: 768px) {
+  .add-device-button, .add-contact-button {
+    width: 45px;
+    height: 45px;
+    font-size: 1.5rem;
+    bottom: 2%;
+    right: 2%;
+  }
+
+  .modal-container {
+    width: 90%;
+    height: 80%;
+  }
+}
+
+@media (max-width: 480px) {
+  .modal-container {
+    width: 95%;
+    height: 85%;
+    padding: 10px;
+  }
+
+  .h2 {
+    font-size: 2rem;
+  }
+
+  .h4 {
+    font-size: 1.2rem;
+  }
 }
