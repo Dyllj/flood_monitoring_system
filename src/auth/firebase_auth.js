@@ -1,20 +1,25 @@
-// Import the functions you need from the SDKs you need
+// firebase_auth.js
 import { initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+import { getAuth, setPersistence, browserLocalPersistence } from "firebase/auth";
+import { getFirestore } from "firebase/firestore";
 
-// Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyAc2-Lkg8YHxN70z-giLGaE9noP70mWgKI",
-  authDomain: "test-no2-68bd7.firebaseapp.com",
-  projectId: "test-no2-68bd7",
-  storageBucket: "test-no2-68bd7.firebasestorage.app",
-  messagingSenderId: "49700792949",
-  appId: "1:49700792949:web:e41325332b0be17061663c",
-  measurementId: "G-YHXD0DXNK3"
+  apiKey: "AIzaSyCf_2aqCvVuW1IxE5PEP2OsDonxKE13m5A",
+  authDomain: "floodmonitor-292dc.firebaseapp.com",
+  databaseURL: "https://floodmonitor-292dc-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "floodmonitor-292dc",
+  storageBucket: "floodmonitor-292dc.appspot.com",
+  messagingSenderId: "892664773357",
+  appId: "1:892664773357:web:076753a796389c9e99eae4"
 };
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+// ✅ Keep the user logged in even after refresh
+setPersistence(auth, browserLocalPersistence)
+  .then(() => console.log("Auth persistence set to local"))
+  .catch((error) => console.error("Error setting persistence:", error));
+
+export { auth, db };

@@ -13,7 +13,7 @@ const LoginForm = ({ onClose, setIsAdmin }) => {
       console.log("Logged in:", userCredential.user);
 
       // Grant admin only if email matches
-      if (email === "admin@gmail.com") {
+      if (email == "molave.mdrrmo@gmail.com") {
         setIsAdmin(true);
       } else {
         alert("You are logged in, but not an admin.");

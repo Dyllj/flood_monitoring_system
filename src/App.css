@@ -93,3 +93,19 @@ header svg {
   max-width: 30rem;
   position: relative;
 }
+
+@media (max-width: 900px) {
+  h1 {
+    font-size: 1.5rem;
+    margin-right: 2rem;
+    max-width: 70vw;
+  }
+}
+
+@media (max-width: 600px) {
+  h1 {
+    font-size: 1.1rem;
+    margin-right: 0.5rem;
+    max-width: 60vw;
+  }
+}

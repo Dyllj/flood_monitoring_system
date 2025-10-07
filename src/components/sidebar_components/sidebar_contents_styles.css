@@ -58,9 +58,9 @@ body {
   border-radius: 50%;
   cursor: pointer;
   font-size: 2rem;
-  display: flex;               /* ✅ enables centering */
-  justify-content: center;     /* ✅ centers horizontally */
-  align-items: center;         /* ✅ centers vertically */
+  display: flex;
+  justify-content: center;
+  align-items: center;
   transition: all 0.3s ease;
   box-shadow: 0 4px 16px 0 rgba(0,0,0,0.3),
               0 6px 20px 0 rgba(0,0,0,0.19);
@@ -167,5 +167,76 @@ body {
 
   .h4 {
     font-size: 1.2rem;
+  }
+}
+
+/* 🌟 Contact Table Overlay Look */
+.contacts-table-container {
+  margin: 3rem auto;
+  width: 100%;
+  max-width: 90rem;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(12px);
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(10, 10, 10, 0.3);
+  overflow-x: auto;
+}
+
+/* ✨ Table Styling */
+.contacts-table {
+  width: 100%;
+  border-collapse: collapse;
+  color: #000000ff;
+  font-size: 1rem;
+}
+
+.contacts-table th,
+.contacts-table td {
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.contacts-table th {
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  font-weight: 700;
+  color: #000000ff;
+  text-transform: uppercase;
+}
+
+.contacts-table th {
+  background: #011627;
+  backdrop-filter: blur(8px);
+  font-weight: 700;
+  color: #ffffffff;
+  text-transform: uppercase;
+}
+
+
+/* 🕶 Empty message style */
+.no-contacts-msg {
+  text-align: center;
+  color: #fff;
+  margin-top: 20px;
+  font-weight: 500;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 1rem;
+  border-radius: 10px;
+}
+
+/* 📱 Responsive adjustments */
+@media (max-width: 768px) {
+  .contacts-table-container {
+    width: 95%;
+    margin-top: 2rem;
+    padding: 1rem;
+  }
+
+  .contacts-table th, .contacts-table td {
+    font-size: 0.9rem;
+    padding: 8px 10px;
   }
 }
