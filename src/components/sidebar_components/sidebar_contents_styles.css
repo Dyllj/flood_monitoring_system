@@ -344,3 +344,137 @@ body {
 .notify-btn:hover {
   color: red;
 }
+
+.action-buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.edit-btn, .delete-btn {
+  background: none;
+  border: none;
+  color: #444;
+  cursor: pointer;
+  font-size: 1.2rem;
+  transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.edit-btn:hover {
+  transform: scale(1.2);
+  color: #007bff; /* blue */
+}
+
+.delete-btn:hover {
+  transform: scale(1.2);
+  color: red;
+}
+
+/* ===== Contact Action Buttons ===== */
+.unique-contact-actions-cell {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.unique-edit-btn,
+.unique-delete-btn {
+  background: none;
+  border: none;
+  color: #444;
+  cursor: pointer;
+  font-size: 1.3rem;
+  transition: transform 0.2s ease, color 0.3s ease;
+}
+
+.unique-edit-btn:hover {
+  color: #007bff;
+  transform: scale(1.2);
+}
+
+.unique-delete-btn:hover {
+  color: red;
+  transform: scale(1.2);
+}
+
+/* ===== Edit Modal Styles ===== */
+.unique-edit-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+}
+
+.unique-edit-modal-container {
+  background: #fff;
+  padding: 1.5rem;
+  border-radius: 12px;
+  width: 35rem;
+  height: 40rem;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.unique-edit-modal-container h3 {
+  margin-bottom: 0.5rem;
+  color: #333;
+}
+
+.unique-edit-modal-container label {
+  font-weight: 500;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+.unique-edit-modal-container input {
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-size: 0.9rem;
+  width: 100%;
+}
+
+.unique-edit-modal-actions {
+  display: flex;
+  justify-content: space-between;
+  border-top: 1px solid #ccc;
+  padding-top: 1rem;
+  margin-top: 2rem;
+}
+
+.unique-save-btn,
+.unique-cancel-btn {
+  border: 1px solid #011627;
+  padding: 8px 16px;
+  margin-top: 2rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.unique-save-btn {
+  background: #28a745;
+  color: white;
+}
+
+.unique-save-btn:hover {
+  background-color: #1f512aff;
+  transition: background-color .3s ease;
+}
+
+.unique-cancel-btn {
+  background: #dc3545;
+}
+
+.unique-cancel-btn:hover {
+   background-color: #56161cff;
+  transition: background-color .3s ease;
+}
