@@ -1,183 +1,296 @@
 import { useState, useEffect } from "react";
 import "./sidebar_contents_styles.css";
 import { IoIosAdd } from "react-icons/io";
-import { RiContactsFill } from "react-icons/ri";
-import { MdEdit, MdDelete, MdOutlineNotificationsActive } from "react-icons/md";
-import AddContact from "../add-forms/Add-contacts";
-import { collection, onSnapshot, query, orderBy } from "firebase/firestore";
-import { db } from "../../auth/firebase_auth";
+import { ImLocation } from "react-icons/im";
+import { MdDeleteOutline } from "react-icons/md";
+import { IoSettingsOutline } from "react-icons/io5";
+import { MdOutlineNotificationsActive } from "react-icons/md";
+import AddDevice from "../add-forms/Add-device";
+import { db, realtimeDB } from "../../auth/firebase_auth";
+import {
+  collection,
+  deleteDoc,
+  doc,
+  updateDoc,
+  onSnapshot,
+} from "firebase/firestore";
+import { ref, onValue, off } from "firebase/database";
+import { LineChart, Line, XAxis, YAxis, ResponsiveContainer } from "recharts";
 
-const ContactSettings_contents = () => {
-  const [showAddContact, setShowAddContact] = useState(false);
-  const [contacts, setContacts] = useState([]);
+const Devices_contents = ({ isAdmin }) => {
+  const [showAddDevice, setShowAddDevice] = useState(false);
+  const [devices, setDevices] = useState([]);
+  const [sensorData, setSensorData] = useState({});
+  const [editingDevice, setEditingDevice] = useState(null);
+  const [editData, setEditData] = useState({
+    name: "",
+    location: "",
+    description: "",
+  });
 
+  // ✅ Firestore real-time listener for devices
   useEffect(() => {
-    // ✅ Create Firestore query to listen in real time
-    const q = query(
-      collection(db, "Authorized_personnel"),
-      orderBy("createdAt", "desc")
-    );
+    const unsub = onSnapshot(collection(db, "devices"), (snapshot) => {
+      const updatedDevices = [];
+      snapshot.forEach((doc) =>
+        updatedDevices.push({ id: doc.id, ...doc.data() })
+      );
+      setDevices(updatedDevices);
+    });
 
-    // ✅ Real-time listener
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        const updatedContacts = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-        setContacts(updatedContacts);
-      },
-      (error) => {
-        console.error("Error fetching contacts:", error);
-        alert("Failed to load contacts. Check console for details.");
-      }
-    );
+    return () => unsub();
+  }, []);
 
-    // ✅ Cleanup listener on unmount (prevents memory leaks)
-    return () => {
-      unsubscribe();
-      console.log("Firestore listener for contacts removed.");
-    };
-  }, []); // Runs once on mount
+  // ✅ RealtimeDB listener for each device
+  useEffect(() => {
+    const listeners = [];
+
+    devices.forEach((device) => {
+      const sensorRef = ref(realtimeDB, `realtime/${device.name}`);
+      const unsubscribe = onValue(sensorRef, (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+          setSensorData((prev) => ({
+            ...prev,
+            [device.name]: {
+              distance: data.distance,
+              timestamp: data.timestamp,
+            },
+          }));
+        }
+      });
+      listeners.push(() => off(sensorRef, "value", unsubscribe));
+    });
+
+    return () => listeners.forEach((unsub) => unsub());
+  }, [devices]);
+
+  // ✅ Delete Device Metadata (Firestore only)
+  const handleDelete = async (id) => {
+    try {
+      await deleteDoc(doc(db, "devices", id));
+      console.log("Device deleted successfully");
+    } catch (error) {
+      console.error("Error deleting device:", error);
+    }
+  };
+
+  // ✅ Edit Device Metadata
+  const handleEdit = (device) => {
+    setEditingDevice(device.id);
+    setEditData({
+      name: device.name,
+      location: device.location,
+      description: device.description || "",
+    });
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await updateDoc(doc(db, "devices", editingDevice), {
+        name: editData.name,
+        location: editData.location,
+        description: editData.description,
+      });
+      setEditingDevice(null);
+      console.log("Device updated successfully");
+    } catch (error) {
+      console.error("Error updating device:", error);
+    }
+  };
+
+  // ✅ Helpers for status
+  const getStatus = (distance) => {
+    if (distance < 100) return { text: "Normal", color: "#4CAF50" };
+    if (distance < 180) return { text: "Elevated", color: "#FFC107" };
+    return { text: "Critical", color: "#F44336" };
+  };
+
+  const getColor = (distance) => {
+    if (distance < 100) return "#00C853";
+    if (distance < 180) return "#FFD600";
+    return "#D50000";
+  };
+
+  const createChartData = (distance) => {
+    const points = [];
+    for (let i = 0; i < 10; i++) {
+      points.push({ time: i, value: distance + Math.random() * 5 - 2 });
+    }
+    return points;
+  };
 
   return (
     <>
-      {/* ✅ Background */}
-      <div className="contactsettings-contents"></div>
-
-      <div className="contactsettings_contents2">
-        <RiContactsFill />
-        <h2>Contact Settings</h2>
+      {/* Section Titles */}
+      <div className="devices-contents"></div>
+      <div className="devices_contents2">
+        <ImLocation />
+        <h2>Devices Location</h2>
       </div>
 
-      {/* ✅ Add contact button */}
-      <button
-        className="add-contact-button"
-        onClick={() => setShowAddContact(true)}
-      >
-        <IoIosAdd />
-      </button>
-
-      {/* ✅ Contacts table */}
-      <div className="contacts-table-container">
-        {contacts.length > 0 ? (
-          <table className="contacts-table">
-            <thead>
-              <tr>
-                <th>Contact Name</th>
-                <th>Home Address</th>
-                <th>Telegram ID</th>
-                <th>Phone Number</th>
-                <th>Date Created</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {contacts.map((contact) => (
-                <tr key={contact.id}>
-                  <td>{contact.Contact_name}</td>
-                  <td>{contact.Home_address}</td>
-                  <td>{contact.Telegram_ID}</td>
-                  <td>{contact.Phone_number}</td>
-                  <td>
-                    {contact.createdAt
-                      ? new Date(contact.createdAt.seconds * 1000).toLocaleString()
-                      : "—"}
-                  </td>
-                  <td className="action-buttons">
-                    <button
-                      id={`notify-btn-${contact.id}`}
-                      className="notify-btn"
-                      title="Send Notification"
-                    >
-                      <MdOutlineNotificationsActive />
-                    </button>
-                    <button
-                      id={`edit-btn-${contact.id}`}
-                      className="edit-btn"
-                      title="Edit Contact"
-                    >
-                      <MdEdit />
-                    </button>
-                    <button
-                      id={`delete-btn-${contact.id}`}
-                      className="delete-btn"
-                      title="Delete Contact"
-                    >
-                      <MdDelete />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        ) : (
-          <p className="no-contacts-msg">No contacts found.</p>
+      {/* Add Button */}
+      <div className="devices-header">
+        {isAdmin && (
+          <button
+            className="add-device-button"
+            onClick={() => setShowAddDevice(true)}
+          >
+            <IoIosAdd />
+          </button>
         )}
       </div>
 
-      {/* ✅ Modal for editing contact */}
-      {showAddContact && (
-        <div
-          className="modal-overlay"
-          id="modal-overlay-contacts"
-          onClick={() => setShowAddContact(false)}
-        >
-          <div
-            className="modal-container"
-            id="modal-container-contacts"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="modal-content">
-              <h3>Edit Contact Information</h3>
-              <form className="edit-contact-form">
-                <label htmlFor="contact-name">Contact Name</label>
-                <input
-                  type="text"
-                  id="contact-name"
-                  name="contact-name"
-                  placeholder="Enter contact name"
-                />
+      {/* Device Grid */}
+      <div className="devices-grid">
+        {devices.map((device) => {
+          const reading = sensorData[device.name] || {};
+          const distance = reading.distance || 0;
+          const status = getStatus(distance);
+          const color = getColor(distance);
 
-                <label htmlFor="home-address">Home Address</label>
-                <input
-                  type="text"
-                  id="home-address"
-                  name="home-address"
-                  placeholder="Enter home address"
-                />
-
-                <label htmlFor="telegram-id">Telegram ID</label>
-                <input
-                  type="text"
-                  id="telegram-id"
-                  name="telegram-id"
-                  placeholder="Enter Telegram ID"
-                />
-
-                <label htmlFor="phone-number">Phone Number</label>
-                <input
-                  type="text"
-                  id="phone-number"
-                  name="phone-number"
-                  placeholder="Enter phone number"
-                />
-
-                <div className="modal-actions">
-                  <button type="submit" id="save-contact-btn">
-                    Save
-                  </button>
-                  <button
-                    type="button"
-                    id="cancel-contact-btn"
-                    onClick={() => setShowAddContact(false)}
+          return (
+            <div key={device.id} className="device-card shadow">
+              <div className="device-header">
+                <h3>{device.name}</h3>
+                <div className="device-actions">
+                  <span
+                    className="status-badge"
+                    style={{ backgroundColor: status.color }}
                   >
-                    Cancel
-                  </button>
+                    {status.text}
+                  </span>
+                  {isAdmin && (
+                    <>
+                      <button className="notify-btn">
+                        <MdOutlineNotificationsActive />
+                      </button>
+                      <button
+                        className="edit-btn"
+                        onClick={() => handleEdit(device)}
+                      >
+                        <IoSettingsOutline />
+                      </button>
+                      <button
+                        className="delete-btn"
+                        onClick={() => handleDelete(device.id)}
+                      >
+                        <MdDeleteOutline />
+                      </button>
+                    </>
+                  )}
                 </div>
-              </form>
+              </div>
+
+              {/* Metadata */}
+              <div className="device-meta">
+                <p>
+                  <strong>Location:</strong> {device.location || "Unknown"}
+                </p>
+                {device.description && (
+                  <p>
+                    <strong>Description:</strong> {device.description}
+                  </p>
+                )}
+              </div>
+
+              {/* Distance Display */}
+              <p className="level-text">
+                Current Level: <b>{distance.toFixed(2)} cm</b> / 300 cm
+              </p>
+
+              <div className="progress-container">
+                <div
+                  className="progress-bar"
+                  style={{
+                    width: `${(distance / 300) * 100}%`,
+                    background: color,
+                  }}
+                ></div>
+              </div>
+
+              <div className="alert-row">
+                <span>⚠ Alert Level</span>
+                <span>{distance.toFixed(2)} cm</span>
+              </div>
+
+              {/* Mini Line Chart */}
+              <div style={{ width: "100%", height: 70 }}>
+                <ResponsiveContainer>
+                  <LineChart data={createChartData(distance)}>
+                    <XAxis dataKey="time" hide />
+                    <YAxis domain={[0, 300]} hide />
+                    <Line
+                      type="monotone"
+                      dataKey="value"
+                      stroke={color}
+                      strokeWidth={2}
+                      dot={false}
+                      animationDuration={500}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
             </div>
+          );
+        })}
+      </div>
+
+      {/* Add Device Modal */}
+      {showAddDevice && (
+        <div className="modal-overlay" onClick={() => setShowAddDevice(false)}>
+          <div className="modal-container" onClick={(e) => e.stopPropagation()}>
+            <AddDevice onClose={() => setShowAddDevice(false)} />
+          </div>
+        </div>
+      )}
+
+      {/* Edit Metadata Modal */}
+      {editingDevice && (
+        <div className="modal-overlay" onClick={() => setEditingDevice(null)}>
+          <div className="modal-container" onClick={(e) => e.stopPropagation()}>
+            <h2>Edit Device Metadata</h2>
+            <form onSubmit={handleEditSubmit}>
+              <label>
+                Device Name:
+                <input
+                  type="text"
+                  value={editData.name}
+                  onChange={(e) =>
+                    setEditData({ ...editData, name: e.target.value })
+                  }
+                  required
+                />
+              </label>
+              <label>
+                Device Location:
+                <input
+                  type="text"
+                  value={editData.location}
+                  onChange={(e) =>
+                    setEditData({ ...editData, location: e.target.value })
+                  }
+                  required
+                />
+              </label>
+              <label>
+                Description:
+                <input
+                  type="text"
+                  value={editData.description}
+                  onChange={(e) =>
+                    setEditData({ ...editData, description: e.target.value })
+                  }
+                />
+              </label>
+              <div className="modal-actions">
+                <button type="submit">Save Changes</button>
+                <button type="button" onClick={() => setEditingDevice(null)}>
+                  Cancel
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
@@ -185,4 +298,4 @@ const ContactSettings_contents = () => {
   );
 };
 
-export default ContactSettings_contents;
+export default Devices_contents;
