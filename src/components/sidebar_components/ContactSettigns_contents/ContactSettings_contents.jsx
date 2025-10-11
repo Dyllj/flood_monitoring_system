@@ -1,37 +1,37 @@
+// src/components/ContactSettings_contents/ContactSettings_contents.jsx
 import { useState, useEffect } from "react";
-import "./sidebar_contents_styles.css";
+import "../sidebar_contents_styles.css";
 import { IoIosAdd } from "react-icons/io";
 import { RiContactsFill } from "react-icons/ri";
-import AddContact from "../add-forms/Add-contacts";
-import {
-  collection,
-  onSnapshot,
-  query,
-  orderBy,
-  doc,
-  deleteDoc,
-  updateDoc,
-} from "firebase/firestore";
-import { db } from "../../auth/firebase_auth";
+import AddContact from "../../add-forms/Add-contacts";
+import { collection, onSnapshot, query, orderBy } from "firebase/firestore";
+import { db } from "../../../auth/firebase_auth";
 
-// ✅ Icons for Edit/Delete
+// Icons for Edit/Delete
 import { IoSettingsOutline } from "react-icons/io5";
 import { MdDeleteOutline } from "react-icons/md";
 
+// ✅ Import separated functions
+import { handleDeleteContact } from "./ContactSettings_contents_functions/handleDeleteContact";
+import { handleOpenEditModal } from "./ContactSettings_contents_functions/handleOpenEditModal";
+import { handleSaveEdit } from "./ContactSettings_contents_functions/handleSaveEdit";
+
 const ContactSettings_contents = () => {
+  // ✅ State declarations
   const [showAddContact, setShowAddContact] = useState(false);
   const [contacts, setContacts] = useState([]);
-  const [editingContact, setEditingContact] = useState(null); // contact being edited
+  const [editingContact, setEditingContact] = useState(null);
   const [editData, setEditData] = useState({
     Contact_name: "",
     Home_address: "",
-    Telegram_ID: "",
+    Position: "",
     Phone_number: "",
   });
 
-  // ✅ Real-time listener for Firestore collection
+  // ✅ Firestore listener for real-time updates
   useEffect(() => {
     const q = query(collection(db, "Authorized_personnel"), orderBy("createdAt", "desc"));
+
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
@@ -47,72 +47,25 @@ const ContactSettings_contents = () => {
       }
     );
 
-    // ✅ Cleanup Firestore listener
     return () => unsubscribe();
   }, []);
 
-  // ✅ Delete Contact
-  const handleDeleteContact = async (id) => {
-    const confirmDelete = window.confirm("Are you sure you want to delete this contact?");
-    if (!confirmDelete) return;
-    try {
-      await deleteDoc(doc(db, "Authorized_personnel", id));
-      setContacts((prev) => prev.filter((contact) => contact.id !== id));
-      console.log("Contact deleted successfully:", id);
-    } catch (error) {
-      console.error("Error deleting contact:", error);
-      alert("Failed to delete contact.");
-    }
-  };
-
-  // ✅ Open Edit Modal
-  const handleOpenEditModal = (contact) => {
-    setEditingContact(contact);
-    setEditData({
-      Contact_name: contact.Contact_name,
-      Home_address: contact.Home_address,
-      Telegram_ID: contact.Telegram_ID,
-      Phone_number: contact.Phone_number,
-    });
-  };
-
-  // ✅ Save Edited Contact
-  const handleSaveEdit = async () => {
-    if (!editingContact) return;
-
-    try {
-      const contactRef = doc(db, "Authorized_personnel", editingContact.id);
-      await updateDoc(contactRef, {
-        Contact_name: editData.Contact_name,
-        Home_address: editData.Home_address,
-        Telegram_ID: editData.Telegram_ID,
-        Phone_number: editData.Phone_number,
-      });
-      setEditingContact(null); // close modal
-      console.log("Contact updated successfully");
-    } catch (error) {
-      console.error("Error updating contact:", error);
-      alert("Failed to update contact.");
-    }
-  };
-
   return (
     <>
-      {/* ✅ Background div */}
       <div className="contactsettings-contents"></div>
 
+      {/* Header */}
       <div className="contactsettings_contents2">
         <RiContactsFill />
         <h2>Contact Settings</h2>
       </div>
 
-      <button
-        className="add-contact-button"
-        onClick={() => setShowAddContact(true)}
-      >
+      {/* Add Contact Button */}
+      <button className="add-contact-button" onClick={() => setShowAddContact(true)}>
         <IoIosAdd />
       </button>
 
+      {/* Contacts Table */}
       <div className="contacts-table-container">
         {contacts.length > 0 ? (
           <table className="contacts-table">
@@ -120,10 +73,10 @@ const ContactSettings_contents = () => {
               <tr>
                 <th>Contact Name</th>
                 <th>Home Address</th>
-                <th>Telegram ID</th>
+                <th>Position</th>
                 <th>Phone Number</th>
                 <th>Date Created</th>
-                <th>Actions</th> {/* ✅ Added actions column */}
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -131,7 +84,7 @@ const ContactSettings_contents = () => {
                 <tr key={contact.id}>
                   <td>{contact.Contact_name}</td>
                   <td>{contact.Home_address}</td>
-                  <td>{contact.Telegram_ID}</td>
+                  <td>{contact.Position}</td>
                   <td>{contact.Phone_number}</td>
                   <td>
                     {contact.createdAt
@@ -139,15 +92,22 @@ const ContactSettings_contents = () => {
                       : "—"}
                   </td>
                   <td className="unique-contact-actions-cell">
+                    {/* Edit Button */}
                     <button
                       className="unique-edit-btn"
-                      onClick={() => handleOpenEditModal(contact)}
+                      onClick={() =>
+                        handleOpenEditModal(contact, setEditingContact, setEditData)
+                      }
                     >
                       <IoSettingsOutline />
                     </button>
+
+                    {/* Delete Button */}
                     <button
                       className="unique-delete-btn"
-                      onClick={() => handleDeleteContact(contact.id)}
+                      onClick={() =>
+                        handleDeleteContact(contact.id, contacts, setContacts)
+                      }
                     >
                       <MdDeleteOutline />
                     </button>
@@ -161,7 +121,7 @@ const ContactSettings_contents = () => {
         )}
       </div>
 
-      {/* ✅ Modal for Adding Contact */}
+      {/* Add Contact Modal */}
       {showAddContact && (
         <div
           className="modal-overlay"
@@ -178,7 +138,7 @@ const ContactSettings_contents = () => {
         </div>
       )}
 
-      {/* ✅ Modal for Editing Contact */}
+      {/* Edit Contact Modal */}
       {editingContact && (
         <div
           className="modal-overlay unique-edit-modal-overlay"
@@ -194,35 +154,51 @@ const ContactSettings_contents = () => {
             <input
               type="text"
               value={editData.Contact_name}
-              onChange={(e) => setEditData({ ...editData, Contact_name: e.target.value })}
+              onChange={(e) =>
+                setEditData({ ...editData, Contact_name: e.target.value })
+              }
             />
 
             <label>Home Address:</label>
             <input
               type="text"
               value={editData.Home_address}
-              onChange={(e) => setEditData({ ...editData, Home_address: e.target.value })}
+              onChange={(e) =>
+                setEditData({ ...editData, Home_address: e.target.value })
+              }
             />
 
-            <label>Telegram ID:</label>
+            <label>Position:</label>
             <input
               type="text"
-              value={editData.Telegram_ID}
-              onChange={(e) => setEditData({ ...editData, Telegram_ID: e.target.value })}
+              value={editData.Position}
+              onChange={(e) =>
+                setEditData({ ...editData, Position: e.target.value })
+              }
             />
 
             <label>Phone Number:</label>
             <input
               type="text"
               value={editData.Phone_number}
-              onChange={(e) => setEditData({ ...editData, Phone_number: e.target.value })}
+              onChange={(e) =>
+                setEditData({ ...editData, Phone_number: e.target.value })
+              }
             />
 
             <div className="unique-edit-modal-actions">
-              <button onClick={handleSaveEdit} className="unique-save-btn">
+              <button
+                onClick={() =>
+                  handleSaveEdit(editingContact, editData, setEditingContact)
+                }
+                className="unique-save-btn"
+              >
                 Save
               </button>
-              <button onClick={() => setEditingContact(null)} className="unique-cancel-btn">
+              <button
+                onClick={() => setEditingContact(null)}
+                className="unique-cancel-btn"
+              >
                 Cancel
               </button>
             </div>

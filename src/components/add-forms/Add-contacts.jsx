@@ -1,8 +1,8 @@
 import "./Forms.css";
 import { IoPersonAddSharp } from "react-icons/io5";
 import { useState } from "react";
-import { db } from "../../auth/firebase_auth"; // ✅ import Firestore
-import { collection, addDoc } from "firebase/firestore"; // ✅ Firestore functions
+import { db } from "../../auth/firebase_auth"; // ✅ Firestore import
+import { collection, addDoc } from "firebase/firestore";
 
 const AddContact = ({ onClose }) => {
   const [loading, setLoading] = useState(false);
@@ -12,10 +12,10 @@ const AddContact = ({ onClose }) => {
 
     const contactName = e.target.contactName.value.trim();
     const homeAddress = e.target.homeAddress.value.trim();
-    const telegramId = e.target.telegramId.value.trim();
+    const position = e.target.position.value.trim();
     const phoneNumber = e.target.phoneNumber.value.trim();
 
-    if (!contactName || !homeAddress || !telegramId || !phoneNumber) {
+    if (!contactName || !homeAddress || !position || !phoneNumber) {
       alert("Please fill in all fields.");
       return;
     }
@@ -23,11 +23,11 @@ const AddContact = ({ onClose }) => {
     try {
       setLoading(true);
 
-      // ✅ Add new document to Firestore collection
+      // ✅ Add new document to Firestore
       await addDoc(collection(db, "Authorized_personnel"), {
         Contact_name: contactName,
         Home_address: homeAddress,
-        Telegram_ID: telegramId,
+        Position: position,
         Phone_number: phoneNumber,
         createdAt: new Date(),
       });
@@ -64,8 +64,8 @@ const AddContact = ({ onClose }) => {
           </label>
 
           <label>
-            Telegram ID:
-            <input type="text" name="telegramId" placeholder="Must not be blank" required />
+            Position:
+            <input type="text" name="position" placeholder="Must not be blank" required />
           </label>
 
           <label>
