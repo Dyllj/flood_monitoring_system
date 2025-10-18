@@ -12,18 +12,20 @@ import { MdOutlineNotificationsActive } from "react-icons/md";
 // ✅ Import AddDevice form component for adding new devices
 import AddDevice from "../../add-forms/Add-device";
 
-// ✅ Firebase imports for Firestore and Realtime Database
+// ✅ Firebase imports for Firestore, Realtime Database, and Functions
 import { db, realtimeDB } from "../../../auth/firebase_auth";
 import { collection, onSnapshot } from "firebase/firestore";
 import { ref, onValue, off } from "firebase/database";
 
+
 // ✅ Charting components for device data visualization
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer } from "recharts";
 
-// ✅ Import separated utility functions for device actions and data processing
+// replace local functions imports for sending notifications with external helper
 import { handleDelete } from "./Devices_contents_functions/handleDelete";
 import { handleEdit } from "./Devices_contents_functions/handleEdit";
 import { handleEditSubmit } from "./Devices_contents_functions/handleEditSubmit";
+import { handleSendNotification } from "./Devices_contents_functions/handleSendNotification";
 import { getStatus } from "./Devices_contents_functions/getStatus";
 import { getColor } from "./Devices_contents_functions/getColor";
 import { createChartData } from "./Devices_contents_functions/createChartData";
@@ -123,8 +125,23 @@ const Devices_contents = ({ isAdmin }) => {
                   </span>
                   {isAdmin && (
                     <>
-                      {/* Notify button (for future alert feature) */}
-                      <button className="notify-btn">
+                      {/* Notify button (now calls external function) */}
+                      <button
+                        className="notify-btn"
+                        onClick={() =>
+                          handleSendNotification(
+                            device.name,
+                            device.location,
+                            distance
+                          )
+                            .then(() =>
+                              alert(`Notification triggered for ${device.name}`)
+                            )
+                            .catch(() =>
+                              alert("Failed to send alert. Check console.")
+                            )
+                        }
+                      >
                         <MdOutlineNotificationsActive />
                       </button>
                       {/* Edit button */}

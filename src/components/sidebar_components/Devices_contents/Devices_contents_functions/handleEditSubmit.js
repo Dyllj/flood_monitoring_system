@@ -1,6 +1,7 @@
 import { updateDoc, doc } from "firebase/firestore";
 import { db } from "./../../../../auth/firebase_auth";
 
+// Handles the submission of the edit device form and updates Firestore.
 export const handleEditSubmit = async (
   e,
   editingDevice,
