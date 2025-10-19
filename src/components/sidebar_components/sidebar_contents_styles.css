@@ -1,0 +1,480 @@
+body {
+  min-height: 100vh;
+  width: 100vw;
+  margin: 0;
+  padding: 0;
+}
+
+.home-bg {
+  background-image: url('../../assets/final_background.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  min-height: 100vh;
+  width: 100vw;
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+}
+
+.devices-contents, .logs-contents, .contactsettings-contents {
+  background-image: url('../../assets/UIbackground.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  min-height: 100vh;
+  width: 100vw;
+  position: fixed;
+  inset: 1;
+  z-index: -1;
+}
+.home_content {
+  margin-top: 25vh;
+}
+.h2,  .h4 {
+  padding: 1.5rem;
+  text-align: right;
+  margin-left: 6%;
+  width: 90%;
+}
+.h2 {
+  font-size: 3rem;
+  font-weight: 900;
+}
+.h4 {
+  margin-top: 1.5rem;
+  font-size: 2rem;
+}
+
+.add-device-button, .add-contact-button {
+  position: absolute;
+  bottom: 5%;
+  right: 5%;
+  width: 60px;
+  height: 60px;
+  background-color: #011627;
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 2rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 16px 0 rgba(0,0,0,0.3),
+              0 6px 20px 0 rgba(0,0,0,0.19);
+}
+
+
+.add-device-button:hover, .add-contact-button:hover {
+  background-color: #3b82f6;
+  border: 1px;
+  box-shadow: 0 8px 24px 0 rgba(59,130,246,0.4), 0 12px 40px 0 rgba(59,130,246,0.19);
+  color: #fff;
+}
+
+.devices_contents2, .contactsettings_contents2, .logs_contents2 {
+  border-top: 3px solid red;
+  display: flex;
+  background: #EBEBEB;
+  box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+}
+
+.devices_contents2 h2, .contactsettings_contents2 h2, .logs_contents2 h2 {
+  font-size: 2rem;
+  font-weight: 900;
+  margin-top: .5rem;
+  align-items: center;
+}
+.devices_contents2 svg, .contactsettings_contents2 svg, .logs_contents2 svg {
+  font-size: 2rem;
+  margin: 1rem 1rem 1rem 6rem;
+  align-items: center;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(2px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+}
+
+.modal-container {
+  width: 30rem;
+  height: 30rem;
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0px 5px 15px rgba(0,0,0,0.3);
+  overflow-y: auto;
+}
+
+#modal-container-contacts {
+  width: 40rem;
+  height: 40rem;
+}
+
+/* ✅ Make Add Buttons Scale Down */
+.add-device-button, .add-contact-button {
+  width: 60px;
+  height: 60px;
+  font-size: 2rem;
+}
+
+@media (max-width: 1024px) {
+  .add-device-button, .add-contact-button {
+    width: 50px;
+    height: 50px;
+    font-size: 1.8rem;
+    bottom: 3%;
+    right: 3%;
+  }
+}
+
+@media (max-width: 768px) {
+  .add-device-button, .add-contact-button {
+    width: 45px;
+    height: 45px;
+    font-size: 1.5rem;
+    bottom: 2%;
+    right: 2%;
+  }
+
+  .modal-container {
+    width: 90%;
+    height: 80%;
+  }
+}
+
+@media (max-width: 480px) {
+  .modal-container {
+    width: 95%;
+    height: 85%;
+    padding: 10px;
+  }
+
+  .h2 {
+    font-size: 2rem;
+  }
+
+  .h4 {
+    font-size: 1.2rem;
+  }
+}
+
+/* 🌟 Contact Table Overlay Look */
+.contacts-table-container {
+  margin: 3rem auto;
+  width: 100%;
+  max-width: 90rem;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(12px);
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(10, 10, 10, 0.3);
+  overflow-x: auto;
+}
+
+/* ✨ Table Styling */
+.contacts-table {
+  width: 100%;
+  border-collapse: collapse;
+  color: #000000ff;
+  font-size: 1rem;
+}
+
+.contacts-table th,
+.contacts-table td {
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.contacts-table th {
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  font-weight: 700;
+  color: #000000ff;
+  text-transform: uppercase;
+}
+
+.contacts-table th {
+  background: #011627;
+  backdrop-filter: blur(8px);
+  font-weight: 700;
+  color: #ffffffff;
+  text-transform: uppercase;
+}
+
+
+/* 🕶 Empty message style */
+.no-contacts-msg {
+  text-align: center;
+  color: #fff;
+  margin-top: 20px;
+  font-weight: 500;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 1rem;
+  border-radius: 10px;
+}
+
+/* 📱 Responsive adjustments */
+@media (max-width: 768px) {
+  .contacts-table-container {
+    width: 95%;
+    margin-top: 2rem;
+    padding: 1rem;
+  }
+
+  .contacts-table th, .contacts-table td {
+    font-size: 0.9rem;
+    padding: 8px 10px;
+  }
+}
+
+.devices-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+  margin-top: 1.5rem;
+  padding: 0 1.5rem;
+  box-sizing: border-box;
+}
+
+
+.device-card {
+  background: linear-gradient(to bottom, #cde9ff, #ffffff);
+  border-radius: 16px;
+  padding: 1rem;
+  width: 90%;
+  transition: all 0.2s ease-in-out;
+  margin: 0 auto;
+}
+
+.device-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+}
+
+.device-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.status-badge {
+  color: #fff;
+  font-size: 0.8rem;
+  padding: 3px 8px;
+  border-radius: 8px;
+}
+
+.level-text {
+  margin: 0.5rem 0;
+  color: #333;
+}
+
+.progress-container {
+  width: 100%;
+  height: 10px;
+  background: #e0e0e0;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  transition: width 0.5s ease;
+}
+
+.alert-row {
+  display: flex;
+  justify-content: space-between;
+  margin: 0.5rem 0;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+.shadow {
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+}
+
+.device-meta {
+  font-size: 0.9rem;
+  color: #444;
+  margin-bottom: 0.5rem;
+  line-height: 1.3;
+}
+
+.device-meta p {
+  margin: 2px 0;
+}
+
+.device-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* ✅ Shared button styling */
+.edit-btn, .delete-btn, .notify-btn {
+  background: none;
+  border: none;
+  color: #444;
+  cursor: pointer;
+  font-size: 1.2rem;
+  transition: transform 0.2s ease, color 0.3s ease;
+}
+
+/* ✅ Subtle hover scale for all */
+.edit-btn:hover, .delete-btn:hover, .notify-btn:hover {
+  transform: scale(1.2);
+}
+
+/* ✅ Notification icon turns red on hover */
+.notify-btn:hover {
+  color: red;
+}
+
+.action-buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.edit-btn, .delete-btn {
+  background: none;
+  border: none;
+  color: #444;
+  cursor: pointer;
+  font-size: 1.2rem;
+  transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.edit-btn:hover {
+  transform: scale(1.2);
+  color: #007bff; /* blue */
+}
+
+.delete-btn:hover {
+  transform: scale(1.2);
+  color: red;
+}
+
+/* ===== Contact Action Buttons ===== */
+.unique-contact-actions-cell {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.unique-edit-btn,
+.unique-delete-btn {
+  background: none;
+  border: none;
+  color: #444;
+  cursor: pointer;
+  font-size: 1.3rem;
+  transition: transform 0.2s ease, color 0.3s ease;
+}
+
+.unique-edit-btn:hover {
+  color: #007bff;
+  transform: scale(1.2);
+}
+
+.unique-delete-btn:hover {
+  color: red;
+  transform: scale(1.2);
+}
+
+/* ===== Edit Modal Styles ===== */
+.unique-edit-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+}
+
+.unique-edit-modal-container {
+  background: #fff;
+  padding: 1.5rem;
+  border-radius: 12px;
+  width: 35rem;
+  height: 40rem;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.unique-edit-modal-container h3 {
+  margin-bottom: 0.5rem;
+  color: #333;
+}
+
+.unique-edit-modal-container label {
+  font-weight: 500;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+.unique-edit-modal-container input {
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-size: 0.9rem;
+  width: 100%;
+}
+
+.unique-edit-modal-actions {
+  display: flex;
+  justify-content: space-between;
+  border-top: 1px solid #ccc;
+  padding-top: 1rem;
+  margin-top: 2rem;
+}
+
+.unique-save-btn,
+.unique-cancel-btn {
+  border: 1px solid #011627;
+  padding: 8px 16px;
+  margin-top: 2rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.unique-save-btn {
+  background: #28a745;
+  color: white;
+}
+
+.unique-save-btn:hover {
+  background-color: #1f512aff;
+  transition: background-color .3s ease;
+}
+
+.unique-cancel-btn {
+  background: #dc3545;
+}
+
+.unique-cancel-btn:hover {
+   background-color: #56161cff;
+  transition: background-color .3s ease;
+}

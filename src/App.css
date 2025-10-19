@@ -1,0 +1,111 @@
+*{
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+.app-header {
+  padding: 20px;
+  background: #011627;
+  height: 8vh;
+  display: flex;
+  justify-content: space-between; /* space out hamburger, title, login */
+  align-items: flex-start;        /* align everything to the top */
+}
+
+h1 {
+  color: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  margin: auto;
+  margin-right: 5rem;
+}
+header svg {
+  color: white;
+  position: absolute;
+  margin-left: .5rem;
+  font-size: 2rem;
+  cursor: pointer;
+}
+.login {
+  display: flex;
+  background: transparent;
+  padding: 5px;
+  position: relative;
+  width: 6em;
+  height: 2em;
+  transition: 0.5s;
+  font-size: 17px;
+  border: none;
+  border-radius: 0.4em;
+  top: -0.2rem;
+  text-decoration: none;
+}
+
+.login svg {
+  position: absolute;
+  height: 1.5rem;
+  opacity: 0;
+  right: .5rem;
+  top: 0.3rem;
+}
+.login h2{
+  font-size: 1rem;
+  position: absolute;
+  top: 0.5rem;
+  left: 1.5rem;
+  margin: 0;
+  padding: 0;
+  transition: .5s;
+  color: #fff;
+}
+.login:hover h2 {
+  color: #011627;
+  left: 0.6rem;
+}
+.login:hover svg {
+  opacity: 1;
+  transition: opacity .5s ease;
+  color: #011627;
+}
+.login:hover{
+  background: #fff;
+}
+#modal-overlay-login {
+  width: 100%;
+  height: 100%;
+  position: fixed;
+  top: 0;
+  left: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+#modal-container-login {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  width: 90%;
+  max-width: 30rem;
+  position: relative;
+}
+
+@media (max-width: 900px) {
+  h1 {
+    font-size: 1.5rem;
+    margin-right: 2rem;
+    max-width: 70vw;
+  }
+}
+
+@media (max-width: 600px) {
+  h1 {
+    font-size: 1.1rem;
+    margin-right: 0.5rem;
+    max-width: 60vw;
+  }
+}
