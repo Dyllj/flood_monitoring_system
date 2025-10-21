@@ -18,7 +18,7 @@ async function sendSemaphoreSMS(apiKey, number, message) {
       apikey: apiKey,
       number,
       message,
-      sendername: "FloodAlert", // must exist in Semaphore account
+      sendername: "FloodAlert", // must be registered in Semaphore
     });
     return response.status;
   } catch (err) {
@@ -38,13 +38,12 @@ function getStatus(distance) {
 // 📲 MANUAL FLOOD ALERT (triggered from dashboard)
 // ----------------------------------------------------------
 exports.sendFloodAlertSMS = onCall({ region: "us-central1" }, async (request) => {
-  const { location, distance, name } = request.data; // 👈 Firestore uses 'name'
-  const sensorName = name; // unify naming
+  const { location, distance, sensorName } = request.data;
 
   if (!location || distance === undefined || !sensorName) {
     throw new HttpsError(
       "invalid-argument",
-      "Missing required parameters: location, distance, or name."
+      "Missing required parameters: location, distance, or sensorName."
     );
   }
 
@@ -65,7 +64,7 @@ Status: ${status}
 Time: ${new Date().toLocaleString("en-PH", { timeZone: "Asia/Manila" })}`;
 
   try {
-    // ✅ Get all authorized personnel from Firestore
+    // ✅ Fetch authorized personnel from Firestore
     const personnelSnap = await admin.firestore().collection("Authorized_personnel").get();
     if (personnelSnap.empty) {
       throw new HttpsError("not-found", "No authorized personnel found.");
@@ -83,7 +82,7 @@ Time: ${new Date().toLocaleString("en-PH", { timeZone: "Asia/Manila" })}`;
       }
     }
 
-    // ✅ Record the alert event to Realtime DB
+    // ✅ Record alert to Realtime DB
     await admin.database().ref(`alerts/${sensorName}`).set({
       alert_sent: true,
       auto_sent: false,
@@ -118,7 +117,6 @@ exports.autoFloodAlert = onValueWritten(
     const distance = newData.distance;
     const db = admin.database();
 
-    // ✅ Determine water level status
     const status = getStatus(distance);
 
     if (status === "Normal") {
@@ -139,18 +137,20 @@ exports.autoFloodAlert = onValueWritten(
     const apiKey = process.env.SEMAPHORE_API_KEY;
 
     try {
-      // ✅ Fetch device location from Firestore
+      // ✅ Fetch location using sensorName field in Firestore
       const deviceDoc = await admin.firestore().collection("devices").doc(deviceName).get();
-      const location = deviceDoc.exists ? deviceDoc.data().location : "Unknown";
+      const deviceData = deviceDoc.exists ? deviceDoc.data() : {};
+      const location = deviceData.location || "Unknown";
+      const sensorName = deviceData.sensorName || deviceName;
 
       const message = `⚠️ FLOOD ALERT (AUTO) ⚠️
 Location: ${location}
-Sensor: ${deviceName}
+Sensor: ${sensorName}
 Distance: ${distance.toFixed(2)} cm
 Status: ${status}
 Time: ${new Date().toLocaleString("en-PH", { timeZone: "Asia/Manila" })}`;
 
-      // ✅ Send to all authorized personnel
+      // ✅ Send to authorized personnel
       const personnelSnap = await admin.firestore().collection("Authorized_personnel").get();
       for (const doc of personnelSnap.docs) {
         const person = doc.data();
@@ -170,7 +170,7 @@ Time: ${new Date().toLocaleString("en-PH", { timeZone: "Asia/Manila" })}`;
         timestamp: Date.now(),
       });
 
-      console.log(`✅ Auto alert successfully sent for ${deviceName}`);
+      console.log(`✅ Auto alert successfully sent for ${sensorName}`);
     } catch (err) {
       console.error("❌ Auto alert failed:", err.response?.data || err.message);
     }

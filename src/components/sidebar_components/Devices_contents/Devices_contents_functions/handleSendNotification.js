@@ -11,9 +11,9 @@ export const handleSendNotification = async (sensorName, deviceLocation, distanc
     const functions = getFunctions(app);
     const sendFloodAlertSMS = httpsCallable(functions, "sendFloodAlertSMS");
 
-    // ✅ Match Firestore structure: use 'name' instead of 'sensorName'
+    // ✅ Firestore & Function now both use 'sensorName'
     const response = await sendFloodAlertSMS({
-      name: sensorName,
+      sensorName: sensorName,
       location: deviceLocation,
       distance: distance,
     });
