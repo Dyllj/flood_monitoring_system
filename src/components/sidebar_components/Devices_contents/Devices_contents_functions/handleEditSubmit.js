@@ -11,9 +11,9 @@ export const handleEditSubmit = async (
   e.preventDefault();
   try {
     await updateDoc(doc(db, "devices", editingDevice), {
-      name: editData.name,
       location: editData.location,
       description: editData.description,
+      timestamp: new Date(),
     });
     setEditingDevice(null);
     console.log("Device updated successfully");

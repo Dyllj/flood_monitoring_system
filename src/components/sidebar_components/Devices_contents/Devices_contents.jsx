@@ -9,7 +9,7 @@ import { MdDeleteOutline } from "react-icons/md";
 import { IoSettingsOutline } from "react-icons/io5";
 import { MdOutlineNotificationsActive } from "react-icons/md";
 
-// ✅ Import AddDevice form component for adding new devices
+// ✅ Import AddDevice form component
 import AddDevice from "../../add-forms/Add-device";
 
 // ✅ Firebase imports for Firestore, Realtime Database, and Functions
@@ -17,11 +17,10 @@ import { db, realtimeDB } from "../../../auth/firebase_auth";
 import { collection, onSnapshot } from "firebase/firestore";
 import { ref, onValue, off } from "firebase/database";
 
-
 // ✅ Charting components for device data visualization
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer } from "recharts";
 
-// replace local functions imports for sending notifications with external helper
+// ✅ External helper functions
 import { handleDelete } from "./Devices_contents_functions/handleDelete";
 import { handleEdit } from "./Devices_contents_functions/handleEdit";
 import { handleEditSubmit } from "./Devices_contents_functions/handleEditSubmit";
@@ -30,20 +29,19 @@ import { getStatus } from "./Devices_contents_functions/getStatus";
 import { getColor } from "./Devices_contents_functions/getColor";
 import { createChartData } from "./Devices_contents_functions/createChartData";
 
-// Main component for displaying and managing devices
+// ✅ Main component for displaying and managing devices
 const Devices_contents = ({ isAdmin }) => {
-  // State for modal visibility, device list, sensor data, and editing state
   const [showAddDevice, setShowAddDevice] = useState(false);
   const [devices, setDevices] = useState([]);
   const [sensorData, setSensorData] = useState({});
   const [editingDevice, setEditingDevice] = useState(null);
   const [editData, setEditData] = useState({
-    name: "",
+    sensorName: "",
     location: "",
     description: "",
   });
 
-  // ✅ Firestore real-time listener: updates device list on any change in Firestore
+  // ✅ Firestore real-time listener: updates device list dynamically
   useEffect(() => {
     const unsub = onSnapshot(collection(db, "devices"), (snapshot) => {
       const updatedDevices = [];
@@ -55,17 +53,17 @@ const Devices_contents = ({ isAdmin }) => {
     return () => unsub();
   }, []);
 
-  // ✅ Realtime Database listener: subscribes to each device's live sensor data
+  // ✅ Realtime Database listener: listens to live sensor data
   useEffect(() => {
     const listeners = [];
     devices.forEach((device) => {
-      const sensorRef = ref(realtimeDB, `realtime/${device.name}`);
+      const sensorRef = ref(realtimeDB, `realtime/${device.sensorName}`);
       const unsubscribe = onValue(sensorRef, (snapshot) => {
         const data = snapshot.val();
         if (data) {
           setSensorData((prev) => ({
             ...prev,
-            [device.name]: {
+            [device.sensorName]: {
               distance: data.distance,
               timestamp: data.timestamp,
             },
@@ -74,7 +72,6 @@ const Devices_contents = ({ isAdmin }) => {
       });
       listeners.push(() => off(sensorRef, "value", unsubscribe));
     });
-    // Cleanup all listeners when devices list changes or component unmounts
     return () => listeners.forEach((unsub) => unsub());
   }, [devices]);
 
@@ -83,13 +80,13 @@ const Devices_contents = ({ isAdmin }) => {
       {/* Background or section styling */}
       <div className="devices-contents"></div>
 
-      {/* Section header with icon */}
+      {/* Section header */}
       <div className="devices_contents2">
         <ImLocation />
         <h2>Devices Location</h2>
       </div>
 
-      {/* Add Device button — visible only to Admin users */}
+      {/* Add Device button (Admin only) */}
       <div className="devices-header">
         {isAdmin && (
           <button
@@ -101,21 +98,19 @@ const Devices_contents = ({ isAdmin }) => {
         )}
       </div>
 
-      {/* Device Cards Grid: displays all devices with live data and admin controls */}
+      {/* Device Cards Grid */}
       <div className="devices-grid">
         {devices.map((device) => {
-          // Get live reading for this device
-          const reading = sensorData[device.name] || {};
+          const reading = sensorData[device.sensorName] || {};
           const distance = reading.distance || 0;
-          // Compute status and color for UI
           const status = getStatus(distance);
           const color = getColor(distance);
 
           return (
             <div key={device.id} className="device-card shadow">
-              {/* Device Header: name, status, and admin controls */}
+              {/* Device Header */}
               <div className="device-header">
-                <h3>{device.name}</h3>
+                <h3>{device.sensorName}</h3>
                 <div className="device-actions">
                   <span
                     className="status-badge"
@@ -123,19 +118,22 @@ const Devices_contents = ({ isAdmin }) => {
                   >
                     {status.text}
                   </span>
+
                   {isAdmin && (
                     <>
-                      {/* Notify button (now calls external function) */}
+                      {/* Notify button */}
                       <button
                         className="notify-btn"
                         onClick={() =>
                           handleSendNotification(
-                            device.name,
+                            device.sensorName,
                             device.location,
                             distance
                           )
                             .then(() =>
-                              alert(`Notification triggered for ${device.name}`)
+                              alert(
+                                `Notification triggered for ${device.sensorName}`
+                              )
                             )
                             .catch(() =>
                               alert("Failed to send alert. Check console.")
@@ -144,6 +142,7 @@ const Devices_contents = ({ isAdmin }) => {
                       >
                         <MdOutlineNotificationsActive />
                       </button>
+
                       {/* Edit button */}
                       <button
                         className="edit-btn"
@@ -153,6 +152,7 @@ const Devices_contents = ({ isAdmin }) => {
                       >
                         <IoSettingsOutline />
                       </button>
+
                       {/* Delete button */}
                       <button
                         className="delete-btn"
@@ -165,7 +165,7 @@ const Devices_contents = ({ isAdmin }) => {
                 </div>
               </div>
 
-              {/* Device metadata: location and description */}
+              {/* Device metadata */}
               <div className="device-meta">
                 <p>
                   <strong>Location:</strong> {device.location || "Unknown"}
@@ -182,7 +182,7 @@ const Devices_contents = ({ isAdmin }) => {
                 Current Level: <b>{distance.toFixed(2)} cm</b> / 300 cm
               </p>
 
-              {/* Progress bar for water level */}
+              {/* Progress bar */}
               <div className="progress-container">
                 <div
                   className="progress-bar"
@@ -199,7 +199,7 @@ const Devices_contents = ({ isAdmin }) => {
                 <span>{distance.toFixed(2)} cm</span>
               </div>
 
-              {/* Mini chart for recent readings */}
+              {/* Mini chart */}
               <div style={{ width: "100%", height: 70 }}>
                 <ResponsiveContainer>
                   <LineChart data={createChartData(distance)}>
@@ -221,7 +221,7 @@ const Devices_contents = ({ isAdmin }) => {
         })}
       </div>
 
-      {/* Add Device Modal (shown when admin clicks +) */}
+      {/* Add Device Modal */}
       {showAddDevice && (
         <div className="modal-overlay" onClick={() => setShowAddDevice(false)}>
           <div className="modal-container" onClick={(e) => e.stopPropagation()}>
@@ -230,7 +230,7 @@ const Devices_contents = ({ isAdmin }) => {
         </div>
       )}
 
-      {/* Edit Device Metadata Modal */}
+      {/* Edit Device Modal */}
       {editingDevice && (
         <div className="modal-overlay" onClick={() => setEditingDevice(null)}>
           <div className="modal-container" onClick={(e) => e.stopPropagation()}>
@@ -241,16 +241,17 @@ const Devices_contents = ({ isAdmin }) => {
               }
             >
               <label>
-                Device Name:
+                Sensor Name:
                 <input
                   type="text"
-                  value={editData.name}
+                  value={editData.sensorName}
                   onChange={(e) =>
-                    setEditData({ ...editData, name: e.target.value })
+                    setEditData({ ...editData, sensorName: e.target.value })
                   }
                   required
                 />
               </label>
+
               <label>
                 Device Location:
                 <input
@@ -262,6 +263,7 @@ const Devices_contents = ({ isAdmin }) => {
                   required
                 />
               </label>
+
               <label>
                 Description:
                 <input
@@ -272,6 +274,7 @@ const Devices_contents = ({ isAdmin }) => {
                   }
                 />
               </label>
+
               <div className="modal-actions">
                 <button type="submit">Save Changes</button>
                 <button type="button" onClick={() => setEditingDevice(null)}>

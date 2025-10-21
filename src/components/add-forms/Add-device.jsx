@@ -1,4 +1,3 @@
-// src/components/add-forms/Add-device.jsx
 import "./Forms.css";
 import { useState } from "react";
 import { MdOutlineSensors } from "react-icons/md";
@@ -7,36 +6,38 @@ import { collection, doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { realtimeDB, db } from "../../auth/firebase_auth";
 
 const AddDevice = ({ onClose }) => {
-  const [deviceName, setDeviceName] = useState("");
+  const [sensorName, setSensorName] = useState("");
   const [deviceLocation, setDeviceLocation] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!deviceName || !deviceLocation) {
+
+    if (!sensorName || !deviceLocation) {
       alert("Both fields are required!");
       return;
     }
 
     try {
       setLoading(true);
-      const deviceRef = ref(realtimeDB, `realtime/${deviceName}`);
+      const deviceRef = ref(realtimeDB, `realtime/${sensorName}`);
 
       // ✅ Check if sensor exists in RealtimeDB
       const snapshot = await get(deviceRef);
       if (!snapshot.exists()) {
-        alert(`No device found in RealtimeDB with name "${deviceName}"`);
+        alert(`No device found in RealtimeDB with name "${sensorName}"`);
         return;
       }
 
-      // ✅ Create Firestore metadata
+      // ✅ Create Firestore metadata (renamed to sensorName)
       const deviceData = {
-        name: deviceName,
+        sensorName: sensorName,
         location: deviceLocation,
         createdAt: serverTimestamp(),
       };
 
-      await setDoc(doc(collection(db, "devices"), deviceName), deviceData);
+      // ✅ Save using sensorName as document ID
+      await setDoc(doc(collection(db, "devices"), sensorName), deviceData);
 
       alert("Device successfully linked and added!");
       onClose();
@@ -57,11 +58,11 @@ const AddDevice = ({ onClose }) => {
       <div className="add-device-form">
         <form onSubmit={handleSubmit}>
           <label id="label1">
-            Device Name:
+            Sensor Name:
             <input
               type="text"
-              value={deviceName}
-              onChange={(e) => setDeviceName(e.target.value)}
+              value={sensorName}
+              onChange={(e) => setSensorName(e.target.value)}
               placeholder="Must match DB key (e.g. sensor01)"
               required
             />

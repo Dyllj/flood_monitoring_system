@@ -2,7 +2,7 @@
 export const handleEdit = (device, setEditingDevice, setEditData) => {
   setEditingDevice(device.id);
   setEditData({
-    name: device.name,
+    sensorName: device.sensorName,
     location: device.location,
     description: device.description || "",
   });

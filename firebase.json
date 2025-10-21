@@ -26,7 +26,10 @@
       "enabled": true,
       "port": 4000
     },
-    "singleProjectMode": false
+    "singleProjectMode": false,
+    "firestore": {
+      "port": 8080
+    }
   },
   "firestore": {
     "database": "(default)",

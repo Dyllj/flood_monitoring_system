@@ -3,7 +3,8 @@
 // Firebase Functions v2 + Firestore + Realtime DB + Semaphore SMS API
 // ================================
 
-const functions = require("firebase-functions");
+const { onCall, HttpsError } = require("firebase-functions/v2/https");
+const { onValueWritten } = require("firebase-functions/v2/database");
 const admin = require("firebase-admin");
 const axios = require("axios");
 require("dotenv").config();
@@ -17,7 +18,7 @@ async function sendSemaphoreSMS(apiKey, number, message) {
       apikey: apiKey,
       number,
       message,
-      sendername: "FloodAlert", // ensure this sender is configured in Semaphore account
+      sendername: "FloodAlert", // must exist in Semaphore account
     });
     return response.status;
   } catch (err) {
@@ -26,128 +27,154 @@ async function sendSemaphoreSMS(apiKey, number, message) {
   }
 }
 
+// ✅ Helper: Determine water level status
+function getStatus(distance) {
+  if (distance >= 180) return "Critical";
+  if (distance >= 120) return "Elevated";
+  return "Normal";
+}
+
 // ----------------------------------------------------------
-// 📲 MANUAL FLOOD ALERT (callable - v1)
+// 📲 MANUAL FLOOD ALERT (triggered from dashboard)
 // ----------------------------------------------------------
-exports.sendFloodAlertSMS = functions
-  .region("us-central1")
-  .https.onCall(async (data, context) => {
-    const { location, distance } = data;
+exports.sendFloodAlertSMS = onCall({ region: "us-central1" }, async (request) => {
+  const { location, distance, name } = request.data; // 👈 Firestore uses 'name'
+  const sensorName = name; // unify naming
 
-    if (!location || distance === undefined) {
-      throw new functions.https.HttpsError("invalid-argument", "Missing location or distance.");
-    }
+  if (!location || distance === undefined || !sensorName) {
+    throw new HttpsError(
+      "invalid-argument",
+      "Missing required parameters: location, distance, or name."
+    );
+  }
 
-    // Prefer secrets/config in production:
-    const apiKey = process.env.SEMAPHORE_API_KEY || functions.config().semaphore?.apikey;
-    if (!apiKey) {
-      console.error("❌ Semaphore API key not set");
-      throw new functions.https.HttpsError("internal", "SMS provider not configured.");
-    }
+  const apiKey = process.env.SEMAPHORE_API_KEY;
+  if (!apiKey) {
+    console.error("❌ Semaphore API key missing in environment variables");
+    throw new HttpsError("internal", "SMS provider not configured properly.");
+  }
 
-    const message = `⚠️ FLOOD ALERT ⚠️
+  const status = getStatus(distance);
+
+  // ✅ Message Format
+  const message = `🚨 FLOOD ALERT 🚨
 Location: ${location}
-Water Level: ${distance} cm
-Status: Elevated or Critical
+Sensor: ${sensorName}
+Distance: ${distance.toFixed(2)} cm
+Status: ${status}
 Time: ${new Date().toLocaleString("en-PH", { timeZone: "Asia/Manila" })}`;
 
-    try {
-      const personnelSnapshot = await admin.firestore().collection("Authorized_personnel").get();
-      const results = [];
-
-      for (const doc of personnelSnapshot.docs) {
-        const person = doc.data();
-        if (person.Phone_number) {
-          const number = person.Phone_number.replace(/^0/, "63");
-          const status = await sendSemaphoreSMS(apiKey, number, message);
-          results.push({ contact: person.Contact_name, status });
-        }
-      }
-
-      await admin.database().ref(`alerts/${location}`).set({
-        alert_sent: true,
-        auto_sent: false,
-        distance,
-        timestamp: Date.now(),
-      });
-
-      console.log("✅ Manual SMS alert sent successfully.");
-      return { success: true, results };
-    } catch (error) {
-      console.error("❌ Error sending SMS:", error.response?.data || error.message);
-      throw new functions.https.HttpsError("internal", "Failed to send SMS alert.");
+  try {
+    // ✅ Get all authorized personnel from Firestore
+    const personnelSnap = await admin.firestore().collection("Authorized_personnel").get();
+    if (personnelSnap.empty) {
+      throw new HttpsError("not-found", "No authorized personnel found.");
     }
-  });
+
+    const results = [];
+
+    // ✅ Send SMS to each authorized contact
+    for (const doc of personnelSnap.docs) {
+      const person = doc.data();
+      if (person.Phone_number) {
+        const number = person.Phone_number.replace(/^0/, "63");
+        const statusCode = await sendSemaphoreSMS(apiKey, number, message);
+        results.push({ name: person.Contact_name, status: statusCode });
+      }
+    }
+
+    // ✅ Record the alert event to Realtime DB
+    await admin.database().ref(`alerts/${sensorName}`).set({
+      alert_sent: true,
+      auto_sent: false,
+      distance,
+      location,
+      status,
+      timestamp: Date.now(),
+    });
+
+    console.log(`✅ Manual SMS alert sent successfully for ${sensorName}`);
+    return { success: true, results };
+  } catch (error) {
+    console.error("❌ Error sending manual alert:", error.response?.data || error.message);
+    throw new HttpsError("internal", "Failed to send SMS alert.");
+  }
+});
 
 // ----------------------------------------------------------
-// ⚙️ AUTOMATIC FLOOD ALERT (Realtime DB trigger - v1)
+// ⚙️ AUTOMATIC FLOOD ALERT (triggered by RTDB change)
 // ----------------------------------------------------------
-exports.autoFloodAlert = functions
-  .region("us-central1")
-  .database.ref("/realtime/{deviceName}")
-  .onWrite(async (change, context) => {
-    const deviceName = context.params.deviceName;
-    const newData = change.after.val();
+exports.autoFloodAlert = onValueWritten(
+  {
+    ref: "/realtime/{deviceName}",
+    region: "us-central1",
+  },
+  async (event) => {
+    const deviceName = event.params.deviceName;
+    const newData = event.data.after.val();
+
     if (!newData || newData.distance === undefined) return;
 
     const distance = newData.distance;
     const db = admin.database();
 
-    if (distance < 100) {
+    // ✅ Determine water level status
+    const status = getStatus(distance);
+
+    if (status === "Normal") {
       console.log(`✅ Normal water level for ${deviceName}: ${distance} cm`);
       return null;
     }
 
-    console.log(`🚨 High water level detected at ${deviceName}: ${distance} cm`);
+    console.log(`🚨 High water level detected at ${deviceName}: ${distance} cm (${status})`);
 
+    // ✅ Prevent duplicate alerts
     const alertRef = db.ref(`alerts/${deviceName}`);
     const alertSnap = await alertRef.get();
-
     if (alertSnap.exists() && alertSnap.val().alert_sent) {
       console.log(`Alert already sent for ${deviceName}.`);
       return null;
     }
 
-    const AUTO_DELAY = 5 * 60 * 1000; // 5 minutes
-    console.log(`⏳ Scheduling auto-SMS alert in 5 minutes for ${deviceName}...`);
+    const apiKey = process.env.SEMAPHORE_API_KEY;
 
-    setTimeout(async () => {
-      const latestAlert = (await alertRef.get()).val();
-      if (latestAlert && latestAlert.alert_sent) {
-        console.log(`Manual alert already sent for ${deviceName}. Skipping auto alert.`);
-        return;
-      }
+    try {
+      // ✅ Fetch device location from Firestore
+      const deviceDoc = await admin.firestore().collection("devices").doc(deviceName).get();
+      const location = deviceDoc.exists ? deviceDoc.data().location : "Unknown";
 
-      const apiKey = process.env.SEMAPHORE_API_KEY || functions.config().semaphore?.apikey;
       const message = `⚠️ FLOOD ALERT (AUTO) ⚠️
-Device: ${deviceName}
-Water Level: ${distance} cm
-Status: ${distance >= 180 ? "Critical" : "Elevated"}
+Location: ${location}
+Sensor: ${deviceName}
+Distance: ${distance.toFixed(2)} cm
+Status: ${status}
 Time: ${new Date().toLocaleString("en-PH", { timeZone: "Asia/Manila" })}`;
 
-      try {
-        const personnelSnap = await admin.firestore().collection("Authorized_personnel").get();
-        for (const doc of personnelSnap.docs) {
-          const person = doc.data();
-          if (person.Phone_number) {
-            const number = person.Phone_number.replace(/^0/, "63");
-            await sendSemaphoreSMS(apiKey, number, message);
-            console.log(`✅ Auto SMS sent to ${person.Contact_name}`);
-          }
+      // ✅ Send to all authorized personnel
+      const personnelSnap = await admin.firestore().collection("Authorized_personnel").get();
+      for (const doc of personnelSnap.docs) {
+        const person = doc.data();
+        if (person.Phone_number) {
+          const number = person.Phone_number.replace(/^0/, "63");
+          await sendSemaphoreSMS(apiKey, number, message);
+          console.log(`✅ Auto SMS sent to ${person.Contact_name}`);
         }
-
-        await alertRef.set({
-          alert_sent: true,
-          auto_sent: true,
-          distance,
-          timestamp: Date.now(),
-        });
-
-        console.log(`✅ Auto alert successfully sent for ${deviceName}`);
-      } catch (err) {
-        console.error("❌ Auto alert failed:", err.response?.data || err.message);
       }
-    }, AUTO_DELAY);
+
+      await alertRef.set({
+        alert_sent: true,
+        auto_sent: true,
+        distance,
+        location,
+        status,
+        timestamp: Date.now(),
+      });
+
+      console.log(`✅ Auto alert successfully sent for ${deviceName}`);
+    } catch (err) {
+      console.error("❌ Auto alert failed:", err.response?.data || err.message);
+    }
 
     return null;
-  });
+  }
+);
