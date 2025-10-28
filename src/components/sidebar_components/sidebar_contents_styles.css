@@ -398,7 +398,7 @@ body {
 }
 
 /* ===== Edit Modal Styles ===== */
-.unique-edit-modal-overlay {
+#edit_modal_overlay {
   position: fixed;
   top: 0;
   left: 0;
@@ -411,30 +411,30 @@ body {
   z-index: 999;
 }
 
-.unique-edit-modal-container {
+#edit_modal_container {
   background: #fff;
   padding: 1.5rem;
   border-radius: 12px;
-  width: 35rem;
-  height: 40rem;
+  width: 30rem;
+  height: 30rem;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-.unique-edit-modal-container h3 {
+#edit_modal_container h3 {
   margin-bottom: 0.5rem;
   color: #333;
 }
 
-.unique-edit-modal-container label {
+#edit_modal_container label {
   font-weight: 500;
   font-size: 0.9rem;
   color: #555;
 }
 
-.unique-edit-modal-container input {
+#edit_modal_container input {
   padding: 8px;
   border-radius: 6px;
   border: 1px solid #ccc;
@@ -442,16 +442,15 @@ body {
   width: 100%;
 }
 
-.unique-edit-modal-actions {
+#edit_modal_container .modal-actions {
   display: flex;
-  justify-content: space-between;
+  justify-content: space-evenly;
   border-top: 1px solid #ccc;
-  padding-top: 1rem;
   margin-top: 2rem;
 }
 
-.unique-save-btn,
-.unique-cancel-btn {
+#save_changes,
+#cancel_save {
   border: 1px solid #011627;
   padding: 8px 16px;
   margin-top: 2rem;
@@ -460,21 +459,21 @@ body {
   transition: all 0.3s ease;
 }
 
-.unique-save-btn {
+#save_changes {
   background: #28a745;
   color: white;
 }
 
-.unique-save-btn:hover {
+#save_changes:hover {
   background-color: #1f512aff;
   transition: background-color .3s ease;
 }
 
-.unique-cancel-btn {
+#cancel_save {
   background: #dc3545;
 }
 
-.unique-cancel-btn:hover {
+#cancel_save:hover {
    background-color: #56161cff;
   transition: background-color .3s ease;
 }

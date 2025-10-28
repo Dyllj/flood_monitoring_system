@@ -232,8 +232,8 @@ const Devices_contents = ({ isAdmin }) => {
 
       {/* Edit Device Modal */}
       {editingDevice && (
-        <div className="modal-overlay" onClick={() => setEditingDevice(null)}>
-          <div className="modal-container" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-overlay" id="edit_modal_overlay" onClick={() => setEditingDevice(null)}>
+          <div className="modal-container" id="edit_modal_container" onClick={(e) => e.stopPropagation()}>
             <h2>Edit Device Metadata</h2>
             <form
               onSubmit={(e) =>
@@ -276,8 +276,8 @@ const Devices_contents = ({ isAdmin }) => {
               </label>
 
               <div className="modal-actions">
-                <button type="submit">Save Changes</button>
-                <button type="button" onClick={() => setEditingDevice(null)}>
+                <button type="submit" id="save_changes">Save Changes</button>
+                <button type="button" id="cancel_save" onClick={() => setEditingDevice(null)}>
                   Cancel
                 </button>
               </div>
