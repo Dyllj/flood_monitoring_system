@@ -3,9 +3,16 @@ import { IoPersonAddSharp } from "react-icons/io5";
 import { useState } from "react";
 import { db } from "../../auth/firebase_auth"; // ✅ Firestore import
 import { collection, addDoc } from "firebase/firestore";
+import AddContactSuccess from "../custom-notification/for-add-contact/add-contact-success";
+import AddContactFailed from "../custom-notification/for-add-contact/add-contact-failed";
 
 const AddContact = ({ onClose }) => {
   const [loading, setLoading] = useState(false);
+
+  // notification states
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [showFailed, setShowFailed] = useState(false);
+  const [failedMsg, setFailedMsg] = useState({ message: "", subText: "" });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -16,7 +23,11 @@ const AddContact = ({ onClose }) => {
     const phoneNumber = e.target.phoneNumber.value.trim();
 
     if (!contactName || !homeAddress || !position || !phoneNumber) {
-      alert("Please fill in all fields.");
+      setFailedMsg({
+        message: "Missing required fields",
+        subText: "Please fill in all fields.",
+      });
+      setShowFailed(true);
       return;
     }
 
@@ -32,13 +43,21 @@ const AddContact = ({ onClose }) => {
         createdAt: new Date(),
       });
 
-      alert("Contact added successfully!");
+      // success notification
+      setShowSuccess(true);
       e.target.reset();
-      onClose();
 
+      // close modal after short delay so user sees the notification
+      setTimeout(() => {
+        onClose();
+      }, 2000);
     } catch (error) {
       console.error("Error adding contact:", error);
-      alert("Failed to add contact. Please try again.");
+      setFailedMsg({
+        message: "Failed to add contact",
+        subText: error?.message || "Please try again.",
+      });
+      setShowFailed(true);
     } finally {
       setLoading(false);
     }
@@ -82,6 +101,38 @@ const AddContact = ({ onClose }) => {
             </button>
           </div>
         </form>
+      </div>
+
+      {/* notification root (fixed) */}
+      <div
+        style={{
+          position: "fixed",
+          top: 18,
+          right: 18,
+          zIndex: 9999,
+          display: "flex",
+          flexDirection: "column",
+          gap: 8,
+        }}
+        aria-live="polite"
+      >
+        {showSuccess && (
+          <AddContactSuccess
+            message="Contact added successfully"
+            subText="Contact stored in Firestore"
+            duration={4000}
+            onClose={() => setShowSuccess(false)}
+          />
+        )}
+
+        {showFailed && (
+          <AddContactFailed
+            message={failedMsg.message}
+            subText={failedMsg.subText}
+            duration={4500}
+            onClose={() => setShowFailed(false)}
+          />
+        )}
       </div>
     </div>
   );
