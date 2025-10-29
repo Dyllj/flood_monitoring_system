@@ -1,6 +1,6 @@
-// src/components/ContactSettings_contents/ContactSettings_contents.jsx
+// src/components/sidebar_components/ContactSettings_contents/ContactSettings_contents.jsx
 import { useState, useEffect } from "react";
-import "../sidebar_contents_styles.css";
+import "../../sidebar_components/sidebar_contents_styles.css";
 import { IoIosAdd } from "react-icons/io";
 import { RiContactsFill } from "react-icons/ri";
 import { IoMdSearch } from "react-icons/io";
@@ -18,6 +18,7 @@ import { handleOpenEditModal } from "./ContactSettings_contents_functions/handle
 import { handleSaveEdit } from "./ContactSettings_contents_functions/handleSaveEdit";
 
 const ContactSettings_contents = () => {
+  // ✅ State declarations
   const [showAddContact, setShowAddContact] = useState(false);
   const [contacts, setContacts] = useState([]);
   const [editingContact, setEditingContact] = useState(null);
@@ -30,6 +31,7 @@ const ContactSettings_contents = () => {
   const [searchInput, setSearchInput] = useState("");
   const [isSearchFocused, setIsSearchFocused] = useState(false);
 
+  // ✅ Firestore listener for real-time updates
   useEffect(() => {
     const q = query(
       collection(db, "Authorized_personnel"),
@@ -75,7 +77,10 @@ const ContactSettings_contents = () => {
       </div>
 
       {/* Add Contact Button */}
-      <button className="add-contact-button" onClick={() => setShowAddContact(true)}>
+      <button
+        className="add-contact-button"
+        onClick={() => setShowAddContact(true)}
+      >
         <IoIosAdd />
       </button>
 
@@ -122,6 +127,7 @@ const ContactSettings_contents = () => {
                       : "—"}
                   </td>
                   <td className="unique-contact-actions-cell">
+                    {/* Edit Button */}
                     <button
                       className="unique-edit-btn"
                       onClick={() =>
@@ -130,6 +136,8 @@ const ContactSettings_contents = () => {
                     >
                       <IoSettingsOutline />
                     </button>
+
+                    {/* Delete Button */}
                     <button
                       className="unique-delete-btn"
                       onClick={() =>
