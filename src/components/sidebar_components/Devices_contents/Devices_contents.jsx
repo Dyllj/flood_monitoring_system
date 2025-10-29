@@ -1,26 +1,15 @@
-// ✅ Import core React features
 import { useState, useEffect } from "react";
 import "../sidebar_contents_styles.css";
-
-// ✅ Import icons for UI actions
 import { IoIosAdd } from "react-icons/io";
 import { ImLocation } from "react-icons/im";
 import { MdDeleteOutline } from "react-icons/md";
 import { IoSettingsOutline } from "react-icons/io5";
 import { MdOutlineNotificationsActive } from "react-icons/md";
-
-// ✅ Import AddDevice form component
 import AddDevice from "../../add-forms/Add-device";
-
-// ✅ Firebase imports for Firestore, Realtime Database, and Functions
 import { db, realtimeDB } from "../../../auth/firebase_auth";
 import { collection, onSnapshot } from "firebase/firestore";
 import { ref, onValue, off } from "firebase/database";
-
-// ✅ Charting components for device data visualization
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer } from "recharts";
-
-// ✅ External helper functions
 import { handleDelete } from "./Devices_contents_functions/handleDelete";
 import { handleEdit } from "./Devices_contents_functions/handleEdit";
 import { handleEditSubmit } from "./Devices_contents_functions/handleEditSubmit";
@@ -28,8 +17,9 @@ import { handleSendNotification } from "./Devices_contents_functions/handleSendN
 import { getStatus } from "./Devices_contents_functions/getStatus";
 import { getColor } from "./Devices_contents_functions/getColor";
 import { createChartData } from "./Devices_contents_functions/createChartData";
+import SmsAlertSuccess from "../../custom-notification/for-sms-alert/sms-alert-success";
+import SmsAlertFailed from "../../custom-notification/for-sms-alert/sms-alert-failed";
 
-// ✅ Main component for displaying and managing devices
 const Devices_contents = ({ isAdmin }) => {
   const [showAddDevice, setShowAddDevice] = useState(false);
   const [devices, setDevices] = useState([]);
@@ -41,7 +31,10 @@ const Devices_contents = ({ isAdmin }) => {
     description: "",
   });
 
-  // ✅ Firestore real-time listener: updates device list dynamically
+  // ✅ Toast notification states
+  const [showSmsAlert, setShowSmsAlert] = useState(false);
+  const [showSmsAlertFailed, setShowSmsAlertFailed] = useState(false);
+
   useEffect(() => {
     const unsub = onSnapshot(collection(db, "devices"), (snapshot) => {
       const updatedDevices = [];
@@ -53,7 +46,6 @@ const Devices_contents = ({ isAdmin }) => {
     return () => unsub();
   }, []);
 
-  // ✅ Realtime Database listener: listens to live sensor data
   useEffect(() => {
     const listeners = [];
     devices.forEach((device) => {
@@ -77,16 +69,17 @@ const Devices_contents = ({ isAdmin }) => {
 
   return (
     <>
-      {/* Background or section styling */}
+      {/* ✅ Toast notifications */}
+      {showSmsAlert && <SmsAlertSuccess />}
+      {showSmsAlertFailed && <SmsAlertFailed />}
+
       <div className="devices-contents"></div>
 
-      {/* Section header */}
       <div className="devices_contents2">
         <ImLocation />
         <h2>Devices Location</h2>
       </div>
 
-      {/* Add Device button (Admin only) */}
       <div className="devices-header">
         {isAdmin && (
           <button
@@ -98,7 +91,6 @@ const Devices_contents = ({ isAdmin }) => {
         )}
       </div>
 
-      {/* Device Cards Grid */}
       <div className="devices-grid">
         {devices.map((device) => {
           const reading = sensorData[device.sensorName] || {};
@@ -108,7 +100,6 @@ const Devices_contents = ({ isAdmin }) => {
 
           return (
             <div key={device.id} className="device-card shadow">
-              {/* Device Header */}
               <div className="device-header">
                 <h3>{device.sensorName}</h3>
                 <div className="device-actions">
@@ -121,29 +112,38 @@ const Devices_contents = ({ isAdmin }) => {
 
                   {isAdmin && (
                     <>
-                      {/* Notify button */}
                       <button
                         className="notify-btn"
-                        onClick={() =>
-                          handleSendNotification(
-                            device.sensorName,
-                            device.location,
-                            distance
-                          )
-                            .then(() =>
-                              alert(
-                                `Notification triggered for ${device.sensorName}`
-                              )
-                            )
-                            .catch(() =>
-                              alert("Failed to send alert. Check console.")
-                            )
-                        }
+                        onClick={async () => {
+                          try {
+                            const res = await handleSendNotification(
+                              device.sensorName,
+                              device.location,
+                              distance
+                            );
+                            if (res.success) {
+                              setShowSmsAlert(true);
+                              setTimeout(() => setShowSmsAlert(false), 4000);
+                            } else {
+                              setShowSmsAlertFailed(true);
+                              setTimeout(
+                                () => setShowSmsAlertFailed(false),
+                                4000
+                              );
+                            }
+                          } catch (err) {
+                            console.error(err);
+                            setShowSmsAlertFailed(true);
+                            setTimeout(
+                              () => setShowSmsAlertFailed(false),
+                              4000
+                            );
+                          }
+                        }}
                       >
                         <MdOutlineNotificationsActive />
                       </button>
 
-                      {/* Edit button */}
                       <button
                         className="edit-btn"
                         onClick={() =>
@@ -153,7 +153,6 @@ const Devices_contents = ({ isAdmin }) => {
                         <IoSettingsOutline />
                       </button>
 
-                      {/* Delete button */}
                       <button
                         className="delete-btn"
                         onClick={() => handleDelete(device.id)}
@@ -165,7 +164,6 @@ const Devices_contents = ({ isAdmin }) => {
                 </div>
               </div>
 
-              {/* Device metadata */}
               <div className="device-meta">
                 <p>
                   <strong>Location:</strong> {device.location || "Unknown"}
@@ -177,12 +175,10 @@ const Devices_contents = ({ isAdmin }) => {
                 )}
               </div>
 
-              {/* Current water level */}
               <p className="level-text">
                 Current Level: <b>{distance.toFixed(2)} cm</b> / 600 cm
               </p>
 
-              {/* Progress bar */}
               <div className="progress-container">
                 <div
                   className="progress-bar"
@@ -193,13 +189,11 @@ const Devices_contents = ({ isAdmin }) => {
                 ></div>
               </div>
 
-              {/* Alert level row */}
               <div className="alert-row">
                 <span>⚠ Alert Level</span>
                 <span>{distance.toFixed(2)} cm</span>
               </div>
 
-              {/* Mini chart */}
               <div style={{ width: "100%", height: 70 }}>
                 <ResponsiveContainer>
                   <LineChart data={createChartData(distance)}>
@@ -221,7 +215,6 @@ const Devices_contents = ({ isAdmin }) => {
         })}
       </div>
 
-      {/* Add Device Modal */}
       {showAddDevice && (
         <div className="modal-overlay" onClick={() => setShowAddDevice(false)}>
           <div className="modal-container" onClick={(e) => e.stopPropagation()}>
@@ -230,25 +223,41 @@ const Devices_contents = ({ isAdmin }) => {
         </div>
       )}
 
-      {/* Edit Device Modal */}
       {editingDevice && (
-        <div className="modal-overlay" id="edit_modal_overlay" onClick={() => setEditingDevice(null)}>
-          <div className="modal-container" id="edit_modal_container" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="modal-overlay"
+          id="edit_modal_overlay"
+          onClick={() => setEditingDevice(null)}
+        >
+          <div
+            className="modal-container"
+            id="edit_modal_container"
+            onClick={(e) => e.stopPropagation()}
+          >
             <h2>Edit Device Metadata</h2>
             <form
               onSubmit={(e) =>
                 handleEditSubmit(e, editingDevice, editData, setEditingDevice)
               }
             >
-              <label>
+              <label className="sensor-label">
                 Sensor Name:
                 <input
                   type="text"
                   value={editData.sensorName}
-                  onChange={(e) =>
-                    setEditData({ ...editData, sensorName: e.target.value })
-                  }
-                  required
+                  readOnly
+                  className="locked-input"
+                  onMouseEnter={() => {
+                    const tooltip = document.createElement("span");
+                    tooltip.innerText = "This field cannot be edited!";
+                    tooltip.className = "input-tooltip";
+                    const parent = document.querySelector(".sensor-label");
+                    parent.appendChild(tooltip);
+                  }}
+                  onMouseLeave={() => {
+                    const tooltip = document.querySelector(".input-tooltip");
+                    if (tooltip) tooltip.remove();
+                  }}
                 />
               </label>
 
@@ -276,8 +285,14 @@ const Devices_contents = ({ isAdmin }) => {
               </label>
 
               <div className="modal-actions">
-                <button type="submit" id="save_changes">Save Changes</button>
-                <button type="button" id="cancel_save" onClick={() => setEditingDevice(null)}>
+                <button type="submit" id="save_changes">
+                  Save Changes
+                </button>
+                <button
+                  type="button"
+                  id="cancel_save"
+                  onClick={() => setEditingDevice(null)}
+                >
                   Cancel
                 </button>
               </div>

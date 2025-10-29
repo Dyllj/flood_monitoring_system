@@ -1,32 +1,27 @@
-// ================================
-// 📲 handleSendNotification.js
-// Trigger manual flood alert via Firebase Cloud Function
-// ================================
-
 import { getFunctions, httpsCallable } from "firebase/functions";
 import { app } from "../../../../auth/firebase_auth";
 
+// ✅ Sends SMS notifications via Firebase Cloud Functions
 export const handleSendNotification = async (sensorName, deviceLocation, distance) => {
   try {
     const functions = getFunctions(app);
     const sendFloodAlertSMS = httpsCallable(functions, "sendFloodAlertSMS");
 
-    // ✅ Firestore & Function now both use 'sensorName'
     const response = await sendFloodAlertSMS({
-      sensorName: sensorName,
+      sensorName,
       location: deviceLocation,
-      distance: distance,
+      distance,
     });
 
     if (response.data.success) {
       console.log(`✅ Alert sent successfully for ${sensorName}`);
-      alert(`Flood alert sent for ${sensorName}!`);
+      return { success: true, sensorName };
     } else {
       console.error("❌ SMS sending failed:", response.data);
-      alert("Failed to send flood alert.");
+      return { success: false };
     }
   } catch (error) {
     console.error("⚠️ Error triggering SMS alert:", error);
-    alert("Error sending SMS. Check console for details.");
+    return { success: false };
   }
 };

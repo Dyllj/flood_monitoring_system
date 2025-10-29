@@ -2,7 +2,7 @@ import "./Login-form.css";
 import { useState } from "react";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../../auth/firebase_auth";
-import { FaEye, FaEyeSlash } from "react-icons/fa"; // React Icons for the eye
+import { FaEye, FaEyeSlash } from "react-icons/fa";
 
 const LoginForm = ({ onClose, setIsAdmin }) => {
   const [showPassword, setShowPassword] = useState(false);
@@ -17,11 +17,12 @@ const LoginForm = ({ onClose, setIsAdmin }) => {
       console.log("Logged in:", userCredential.user);
 
       if (email === "molave.mdrrmo@gmail.com") {
-        setIsAdmin(true);
+        setIsAdmin(true); // trigger success card
       } else {
         alert("You are logged in, but not an admin.");
       }
 
+      // Close form **after setting admin state**
       onClose();
     } catch (error) {
       console.error("Login failed:", error.message);

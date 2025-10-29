@@ -31,8 +31,8 @@ async function sendSemaphoreSMS(apiKey, number, message) {
 
 // ================= Helper: Determine water level status =================
 function getStatus(distance) {
-  if (distance >= 180) return "Critical";
-  if (distance >= 120) return "Elevated";
+  if (distance >= 400) return "Critical";
+  if (distance >= 200) return "Elevated";
   return "Normal";
 }
 

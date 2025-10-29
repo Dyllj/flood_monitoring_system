@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import "../sidebar_contents_styles.css";
 import { IoIosAdd } from "react-icons/io";
 import { RiContactsFill } from "react-icons/ri";
+import { IoMdSearch } from "react-icons/io";
 import AddContact from "../../add-forms/Add-contacts";
 import { collection, onSnapshot, query, orderBy } from "firebase/firestore";
 import { db } from "../../../auth/firebase_auth";
@@ -17,7 +18,6 @@ import { handleOpenEditModal } from "./ContactSettings_contents_functions/handle
 import { handleSaveEdit } from "./ContactSettings_contents_functions/handleSaveEdit";
 
 const ContactSettings_contents = () => {
-  // ✅ State declarations
   const [showAddContact, setShowAddContact] = useState(false);
   const [contacts, setContacts] = useState([]);
   const [editingContact, setEditingContact] = useState(null);
@@ -27,10 +27,14 @@ const ContactSettings_contents = () => {
     Position: "",
     Phone_number: "",
   });
+  const [searchInput, setSearchInput] = useState("");
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
 
-  // ✅ Firestore listener for real-time updates
   useEffect(() => {
-    const q = query(collection(db, "Authorized_personnel"), orderBy("createdAt", "desc"));
+    const q = query(
+      collection(db, "Authorized_personnel"),
+      orderBy("createdAt", "desc")
+    );
 
     const unsubscribe = onSnapshot(
       q,
@@ -50,6 +54,16 @@ const ContactSettings_contents = () => {
     return () => unsubscribe();
   }, []);
 
+  const filteredContacts = contacts.filter((contact) => {
+    const lowerInput = searchInput.toLowerCase();
+    return (
+      contact.Contact_name.toLowerCase().includes(lowerInput) ||
+      contact.Home_address.toLowerCase().includes(lowerInput) ||
+      contact.Position.toLowerCase().includes(lowerInput) ||
+      contact.Phone_number.toLowerCase().includes(lowerInput)
+    );
+  });
+
   return (
     <>
       <div className="contactsettings-contents"></div>
@@ -65,9 +79,25 @@ const ContactSettings_contents = () => {
         <IoIosAdd />
       </button>
 
-      {/* Contacts Table */}
+      {/* Contacts Table + Search Bar */}
       <div className="contacts-table-container">
-        {contacts.length > 0 ? (
+        {/* Search Bar */}
+        <div className="search-container">
+          <IoMdSearch
+            className={`search-icon ${isSearchFocused ? "icon-right" : "icon-left"}`}
+          />
+          <input
+            type="text"
+            placeholder="Search contact..."
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            onFocus={() => setIsSearchFocused(true)}
+            onBlur={() => setIsSearchFocused(false)}
+          />
+        </div>
+
+        {/* Table */}
+        {filteredContacts.length > 0 ? (
           <table className="contacts-table">
             <thead>
               <tr>
@@ -80,7 +110,7 @@ const ContactSettings_contents = () => {
               </tr>
             </thead>
             <tbody>
-              {contacts.map((contact) => (
+              {filteredContacts.map((contact) => (
                 <tr key={contact.id}>
                   <td>{contact.Contact_name}</td>
                   <td>{contact.Home_address}</td>
@@ -92,7 +122,6 @@ const ContactSettings_contents = () => {
                       : "—"}
                   </td>
                   <td className="unique-contact-actions-cell">
-                    {/* Edit Button */}
                     <button
                       className="unique-edit-btn"
                       onClick={() =>
@@ -101,8 +130,6 @@ const ContactSettings_contents = () => {
                     >
                       <IoSettingsOutline />
                     </button>
-
-                    {/* Delete Button */}
                     <button
                       className="unique-delete-btn"
                       onClick={() =>

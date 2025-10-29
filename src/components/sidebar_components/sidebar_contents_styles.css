@@ -219,7 +219,7 @@ body {
 /* 🕶 Empty message style */
 .no-contacts-msg {
   text-align: center;
-  color: #fff;
+  color: #000000ff;
   margin-top: 20px;
   font-weight: 500;
   background: rgba(255, 255, 255, 0.1);
@@ -398,7 +398,7 @@ body {
 }
 
 /* ===== Edit Modal Styles ===== */
-#edit_modal_overlay {
+#edit_modal_overlay, .unique-edit-modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
@@ -409,6 +409,18 @@ body {
   justify-content: center;
   align-items: center;
   z-index: 999;
+}
+
+.unique-edit-modal-container {
+  background: #fff;
+  padding: 1.5rem;
+  border-radius: 12px;
+  width: 30rem;
+  height: 37rem;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 #edit_modal_container {
@@ -423,18 +435,18 @@ body {
   gap: 10px;
 }
 
-#edit_modal_container h3 {
+#edit_modal_container h3, .unique-edit-modal-container h3  {
   margin-bottom: 0.5rem;
   color: #333;
 }
 
-#edit_modal_container label {
+#edit_modal_container label, .unique-edit-modal-container label {
   font-weight: 500;
   font-size: 0.9rem;
   color: #555;
 }
 
-#edit_modal_container input {
+#edit_modal_container input, .unique-edit-modal-container input {
   padding: 8px;
   border-radius: 6px;
   border: 1px solid #ccc;
@@ -442,15 +454,16 @@ body {
   width: 100%;
 }
 
-#edit_modal_container .modal-actions {
+#edit_modal_container, .unique-edit-modal-container .unique-edit-modal-actions, .modal-actions {
   display: flex;
   justify-content: space-evenly;
   border-top: 1px solid #ccc;
   margin-top: 2rem;
 }
 
+
 #save_changes,
-#cancel_save {
+#cancel_save,.unique-save-btn, .unique-cancel-btn {
   border: 1px solid #011627;
   padding: 8px 16px;
   margin-top: 2rem;
@@ -459,21 +472,21 @@ body {
   transition: all 0.3s ease;
 }
 
-#save_changes {
+#save_changes, .unique-save-btn {
   background: #28a745;
   color: white;
 }
 
-#save_changes:hover {
+#save_changes:hover, .unique-save-btn:hover {
   background-color: #1f512aff;
   transition: background-color .3s ease;
 }
 
-#cancel_save {
+#cancel_save, .unique-cancel-btn {
   background: #dc3545;
 }
 
-#cancel_save:hover {
+#cancel_save:hover, .unique-cancel-btn:hover {
    background-color: #56161cff;
   transition: background-color .3s ease;
 }
@@ -493,4 +506,78 @@ body {
 .logs-list p{
   color: #000000ff;
   text-align: center;
+}
+.locked-input {
+  color: #555;            /* faded/dimmed black */
+  background-color: #f5f5f5;
+  border: 1px solid #ccc;
+  cursor: not-allowed;
+}
+
+.sensor-label {
+  position: relative;
+  display: inline-block;
+}
+
+.input-tooltip {
+  position: absolute;
+  top: 100%;       /* positions below the input */
+  left: 0;
+  margin-top: 4px; /* small spacing below the input */
+  background: #333;
+  color: #fff;
+  font-size: 12px;
+  padding: 3px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+  z-index: 10;
+  opacity: 0.9;
+  pointer-events: none;
+}
+.contacts-table-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.search-container {
+  position: relative;
+  width: 100%;
+  max-width: 30rem;
+  margin-bottom: 10px;
+}
+
+.search-container input {
+  width: 100%;
+  padding: 8px 30px 8px 10px; /* padding-left for icon */
+  border-radius: 5px;
+  border: 1px solid #ccc;
+  outline: none;
+}
+
+.search-container input::placeholder {
+  color: #aaa;
+  /* Optional: move placeholder a bit further to the right */
+  padding-left: 1.5rem;
+  transition: opacity 0.3s ease;
+}
+.search-container input:focus::placeholder {
+  opacity: 0;
+}
+
+.search-icon {
+  position: absolute;
+  top: 55%;
+  transform: translateY(-50%);
+  color: #888;
+  pointer-events: none;
+  transition: left 0.8s ease-in-out; /* smooth slide */
+}
+
+.icon-left {
+  left: 10px; /* initial position */
+}
+
+.icon-right {
+  left: 93%; /* moves right when input focused */
 }
