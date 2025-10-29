@@ -477,3 +477,20 @@ body {
    background-color: #56161cff;
   transition: background-color .3s ease;
 }
+
+.logs-list {
+  margin: 2rem auto;
+  width: 100%;
+  max-width: 90rem;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(12px);
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(10, 10, 10, 0.3);
+}
+
+.logs-list p{
+  color: #000000ff;
+  text-align: center;
+}

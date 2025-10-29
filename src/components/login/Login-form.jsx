@@ -1,8 +1,12 @@
 import "./Login-form.css";
+import { useState } from "react";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../../auth/firebase_auth";
+import { FaEye, FaEyeSlash } from "react-icons/fa"; // React Icons for the eye
 
 const LoginForm = ({ onClose, setIsAdmin }) => {
+  const [showPassword, setShowPassword] = useState(false);
+
   const handleLogin = async (e) => {
     e.preventDefault();
     const email = e.target.username.value;
@@ -12,8 +16,7 @@ const LoginForm = ({ onClose, setIsAdmin }) => {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       console.log("Logged in:", userCredential.user);
 
-      // Grant admin only if email matches
-      if (email == "molave.mdrrmo@gmail.com") {
+      if (email === "molave.mdrrmo@gmail.com") {
         setIsAdmin(true);
       } else {
         alert("You are logged in, but not an admin.");
@@ -34,10 +37,24 @@ const LoginForm = ({ onClose, setIsAdmin }) => {
           Email:
           <input type="email" name="username" required />
         </label>
-        <label>
+
+        <label className="password-label">
           Password:
-          <input type="password" name="password" required />
+          <div className="password-wrapper">
+            <input
+              type={showPassword ? "text" : "password"}
+              name="password"
+              required
+            />
+            <span
+              className="toggle-password"
+              onClick={() => setShowPassword(!showPassword)}
+            >
+              {showPassword ? <FaEyeSlash /> : <FaEye />}
+            </span>
+          </div>
         </label>
+
         <div className="login-actions">
           <button type="submit" id="login-button">Login</button>
           <button type="button" id="cancel-button" onClick={onClose}>Cancel</button>

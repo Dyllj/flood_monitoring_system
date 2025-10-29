@@ -179,7 +179,7 @@ const Devices_contents = ({ isAdmin }) => {
 
               {/* Current water level */}
               <p className="level-text">
-                Current Level: <b>{distance.toFixed(2)} cm</b> / 300 cm
+                Current Level: <b>{distance.toFixed(2)} cm</b> / 600 cm
               </p>
 
               {/* Progress bar */}
@@ -187,7 +187,7 @@ const Devices_contents = ({ isAdmin }) => {
                 <div
                   className="progress-bar"
                   style={{
-                    width: `${(distance / 300) * 100}%`,
+                    width: `${(distance / 600) * 100}%`,
                     background: color,
                   }}
                 ></div>
@@ -204,7 +204,7 @@ const Devices_contents = ({ isAdmin }) => {
                 <ResponsiveContainer>
                   <LineChart data={createChartData(distance)}>
                     <XAxis dataKey="time" hide />
-                    <YAxis domain={[0, 300]} hide />
+                    <YAxis domain={[0, 600]} hide />
                     <Line
                       type="monotone"
                       dataKey="value"
