@@ -1,4 +1,4 @@
-import './sidebar_contents_styles.css'
+import "./sidebar_contents_styles.css";
 import { MdCreateNewFolder } from "react-icons/md";
 import { TbFilterCog, TbLogs, TbSearch } from "react-icons/tb";
 import { GrPowerReset } from "react-icons/gr";
@@ -7,6 +7,8 @@ import { TiCancel } from "react-icons/ti";
 import { useState, useEffect } from "react";
 import { collection, getDocs, query, orderBy } from "firebase/firestore";
 import { db } from "../../auth/firebase_auth";
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
 
 const Logs_contents = () => {
   const [showFilterModal, setShowFilterModal] = useState(false);
@@ -17,30 +19,29 @@ const Logs_contents = () => {
   const [logs, setLogs] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Fetch sensors for filter dropdown
+  // 🔹 Fetch sensors for dropdown
   useEffect(() => {
     const fetchSensors = async () => {
       const devicesRef = collection(db, "devices");
       const snapshot = await getDocs(devicesRef);
-      const sensors = snapshot.docs.map(doc => doc.data().sensorName || doc.id);
+      const sensors = snapshot.docs.map((doc) => doc.data().sensorName || doc.id);
       setSensorsList(sensors);
     };
     fetchSensors();
   }, []);
 
-  // Fetch logs
+  // 🔹 Fetch logs
   useEffect(() => {
     let isMounted = true;
-
     const fetchLogs = async () => {
       try {
         const logsRef = collection(db, "Alert_logs");
         const q = query(logsRef, orderBy("timestamp", "desc"));
         const snapshot = await getDocs(q);
         if (isMounted) {
-          const logsData = snapshot.docs.map(doc => ({
+          const logsData = snapshot.docs.map((doc) => ({
             id: doc.id,
-            ...doc.data()
+            ...doc.data(),
           }));
           setLogs(logsData);
         }
@@ -50,15 +51,14 @@ const Logs_contents = () => {
     };
 
     fetchLogs();
-
     return () => {
       isMounted = false;
     };
   }, []);
 
-  // Filter logs based on modal selections
+  // 🔹 Filter logs
   const filteredLogs = logs
-    .filter(log => {
+    .filter((log) => {
       const logDate = new Date(log.timestamp);
       const fromDate = startDate ? new Date(startDate) : null;
       const toDate = endDate ? new Date(endDate) : null;
@@ -72,8 +72,7 @@ const Logs_contents = () => {
 
       return dateMatch && sensorMatch;
     })
-    .filter(log => {
-      // Filter by search term
+    .filter((log) => {
       const term = searchTerm.toLowerCase();
       return (
         log.sensorName?.toLowerCase().includes(term) ||
@@ -83,51 +82,130 @@ const Logs_contents = () => {
       );
     });
 
+  // 🔹 Reset filters
   const handleReset = () => {
     setStartDate("");
     setEndDate("");
     setSensor("All");
   };
 
+  // 🔹 Save filters
   const handleSave = () => {
     console.log("Filters saved:", { startDate, endDate, sensor });
     setShowFilterModal(false);
   };
 
+  // 🔹 Cancel modal
   const handleCancel = () => {
     setShowFilterModal(false);
   };
 
+  // 📊 Generate detailed Excel Report with Flood Rate %
+  const handleGenerateReport = () => {
+    if (filteredLogs.length === 0) {
+      alert("No logs available to export!");
+      return;
+    }
+
+    // Group logs by sensor
+    const grouped = {};
+    filteredLogs.forEach((log) => {
+      const key = log.sensorName || "Unknown Sensor";
+      if (!grouped[key]) grouped[key] = [];
+      grouped[key].push(log);
+    });
+
+    const wb = XLSX.utils.book_new();
+
+    Object.keys(grouped).forEach((sensorName) => {
+      const logsForSensor = grouped[sensorName];
+      const distances = logsForSensor.map((l) => l.distance || 0);
+
+      // Compute metrics
+      const avgDistance = distances.reduce((a, b) => a + b, 0) / distances.length;
+      const maxDistance = Math.max(...distances);
+      const minDistance = Math.min(...distances);
+      const peakLog = logsForSensor.find((l) => l.distance === maxDistance);
+      const peakTime = peakLog ? new Date(peakLog.timestamp).toLocaleString("en-PH") : "N/A";
+
+      // Count flood events (Elevated, Critical, Flood)
+      const floodEvents = logsForSensor.filter(
+        (l) =>
+          l.status?.toLowerCase().includes("elevated") ||
+          l.status?.toLowerCase().includes("critical") ||
+          l.status?.toLowerCase().includes("flood")
+      ).length;
+
+      // ✅ Average Flood Rate in Percentage
+      const avgFloodRate = ((floodEvents / logsForSensor.length) * 100).toFixed(2);
+
+      // Count statuses
+      const statusCount = {};
+      logsForSensor.forEach((l) => {
+        const s = l.status || "Unknown";
+        statusCount[s] = (statusCount[s] || 0) + 1;
+      });
+      const statusSummary = Object.entries(statusCount)
+        .map(([k, v]) => `${k}: ${((v / logsForSensor.length) * 100).toFixed(1)}%`)
+        .join(", ");
+
+      // Create summary section
+      const summary = [
+        ["📘 Sensor Summary Report"],
+        ["Sensor Name:", sensorName],
+        ["Location:", logsForSensor[0]?.location || "N/A"],
+        ["Date Range:", `${startDate || "All"} to ${endDate || "All"}`],
+        ["Average Water Level (cm):", avgDistance.toFixed(2)],
+        ["Average Flood Rate (%):", `${avgFloodRate}%`],
+        ["Peak Water Level (cm):", maxDistance],
+        ["Lowest Water Level (cm):", minDistance],
+        ["Peak Flood Time:", peakTime],
+        ["Flood Frequency (Elevated/Critical/Flood):", floodEvents],
+        ["Status Breakdown:", statusSummary],
+        [],
+        ["Timestamp", "Sensor", "Location", "Distance (cm)", "Status", "Type"],
+      ];
+
+      const tableData = logsForSensor.map((log) => [
+        new Date(log.timestamp).toLocaleString("en-PH"),
+        log.sensorName,
+        log.location,
+        log.distance,
+        log.status,
+        log.type,
+      ]);
+
+      const sheetData = [...summary, ...tableData];
+      const ws = XLSX.utils.aoa_to_sheet(sheetData);
+      XLSX.utils.book_append_sheet(wb, ws, sensorName.substring(0, 31));
+    });
+
+    const wbout = XLSX.write(wb, { type: "array", bookType: "xlsx" });
+    const filename = `Flood_Report_${new Date().toISOString().slice(0, 10)}.xlsx`;
+    saveAs(new Blob([wbout], { type: "application/octet-stream" }), filename);
+  };
+
   return (
     <>
-    <div className="logs-contents">
-
-    </div>
+      <div className="logs-contents"></div>
       <div className="logs_contents2">
         <TbLogs />
         <h2>Logs</h2>
       </div>
 
-      {/* Search Bar */}
-
-
       {/* Logs Table */}
       <div className="logs-contents-container">
+        {/* Search Bar */}
         <div className="search-container">
           <input
             type="text"
             placeholder="Search logs..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            onFocus={(e) =>
-              e.target.nextSibling.classList.replace("icon-left", "icon-right")
-            }
-            onBlur={(e) =>
-              e.target.nextSibling.classList.replace("icon-right", "icon-left")
-            }
           />
           <TbSearch className="search-icon icon-left" />
         </div>
+
         {filteredLogs.length === 0 ? (
           <p className="no-logs-msg">No logs available.</p>
         ) : (
@@ -143,7 +221,7 @@ const Logs_contents = () => {
               </tr>
             </thead>
             <tbody>
-              {filteredLogs.map(log => (
+              {filteredLogs.map((log) => (
                 <tr key={log.id}>
                   <td>{new Date(log.timestamp).toLocaleString("en-PH")}</td>
                   <td>{log.sensorName}</td>
@@ -166,7 +244,7 @@ const Logs_contents = () => {
         >
           <TbFilterCog />
         </button>
-        <button className="report-btn">
+        <button className="report-btn" onClick={handleGenerateReport}>
           <MdCreateNewFolder />
         </button>
       </div>
