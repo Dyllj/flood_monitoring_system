@@ -8,11 +8,15 @@ export const handleSendNotification = async (sensorName, deviceLocation, distanc
       distance,
     });
 
-    if (response.success) {
+    // ✅ callable function response is wrapped in .data
+    const data = response.data;
+
+    if (data && data.success) {
       console.log(`✅ Alert sent successfully for ${sensorName}`);
-      return { success: true, sensorName };
+      console.log("SMS results:", data.results);
+      return { success: true, sensorName, results: data.results };
     } else {
-      console.error("❌ SMS sending failed:", response);
+      console.error("❌ SMS sending failed:", data);
       return { success: false };
     }
   } catch (error) {
