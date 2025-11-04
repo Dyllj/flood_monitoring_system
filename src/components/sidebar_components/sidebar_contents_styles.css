@@ -750,24 +750,59 @@ body {
 /* ===============================
    🗑️ Delete Button Styles
 =============================== */
-.delete-btn {
+#Delete-btn {
   background: none;
   border: none;
   cursor: pointer;
-  color: #e74c3c;
   font-size: 1.3rem;
   transition: color 0.2s ease, transform 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
   margin-left: 1.5rem;
+
 }
 
-.delete-btn:hover {
+#Delete-btn:hover {
   color: #ff4d4d;
   transform: scale(1.2);
 }
 
-.delete-btn:active {
+#Delete-btn:active {
   transform: scale(0.95);
+}
+/* ================================
+   🌊 ECG / Heartbeat Chart Styles
+   ================================ */
+
+/* ✅ Smooth glowing heartbeat line */
+.recharts-line path {
+  transition: all 0.8s ease-in-out;
+  filter: drop-shadow(0 0 6px rgba(0, 255, 0, 0.8));
+  animation: glowPulse 2s infinite ease-in-out;
+}
+
+@keyframes glowPulse {
+  0% {
+    filter: drop-shadow(0 0 2px rgba(0, 255, 0, 0.6));
+  }
+  50% {
+    filter: drop-shadow(0 0 10px rgba(0, 255, 0, 1));
+  }
+  100% {
+    filter: drop-shadow(0 0 2px rgba(0, 255, 0, 0.6));
+  }
+}
+
+/* ✅ Subtle ECG grid lines */
+.recharts-cartesian-grid-horizontal line,
+.recharts-cartesian-grid-vertical line {
+  stroke: rgba(16, 16, 16, 0.15);
+  stroke-width: 1;
+  shape-rendering: crispEdges;
+}
+
+/* ✅ Slightly denser grid look (like ECG graph paper) */
+.recharts-cartesian-grid line {
+  stroke-opacity: 0.3;
 }

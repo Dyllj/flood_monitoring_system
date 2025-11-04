@@ -1,19 +1,19 @@
-import React, { useEffect } from 'react';
-import styled from 'styled-components';
+import React, { useEffect } from "react";
+import styled from "styled-components";
 
-const Card = ({
+const ConfirmDeleteLog = ({
   onClose,
-  message = "Deactivate account",
-  subText = "",
-  confirmText = "Deactivate",
-  cancelText = "Cancel"
+  message = "Delete log",
+  subText = "Are you sure you want to delete this log? This action cannot be undone.",
+  confirmText = "Delete",
+  cancelText = "Cancel",
 }) => {
   useEffect(() => {
-    const onKey = (e) => {
+    const handleKeyDown = (e) => {
       if (e.key === "Escape") onClose(false);
     };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
   }, [onClose]);
 
   return (
@@ -38,18 +38,20 @@ const Card = ({
             </div>
 
             <div className="content">
-              <span id="confirm-title" className="title">{message}</span>
-              {subText ? <p className="message">{subText}</p> : null}
+              <span id="confirm-title" className="title">
+                {message}
+              </span>
+              {subText && <p className="message">{subText}</p>}
             </div>
+          </div>
 
-            <div className="actions">
-              <button className="desactivate" type="button" onClick={() => onClose(true)}>
-                {confirmText}
-              </button>
-              <button className="cancel" type="button" onClick={() => onClose(false)}>
-                {cancelText}
-              </button>
-            </div>
+          <div className="actions">
+            <button className="desactivate" onClick={() => onClose(true)}>
+              {confirmText}
+            </button>
+            <button className="cancel" onClick={() => onClose(false)}>
+              {cancelText}
+            </button>
           </div>
         </div>
       </StyledWrapper>
@@ -57,6 +59,9 @@ const Card = ({
   );
 };
 
+// ====================
+// 💅 Styled Components
+// ====================
 const Overlay = styled.div`
   position: fixed;
   inset: 0;
@@ -64,27 +69,27 @@ const Overlay = styled.div`
   display: flex;
   justify-content: center;
   align-items: center;
+
   z-index: 9999;
 `;
 
 const StyledWrapper = styled.div`
   .card {
     overflow: hidden;
-    position: relative;
     background-color: #ffffff;
     border-radius: 0.75rem;
-    text-align: left;
+    text-align: center;
     max-width: 1200px;
-    width: min(95%, 1200px);
-
-    box-shadow:
-      0 25px 40px rgba(0, 0, 0, 0.1),
+    justify-content: center;
+    align-items: center;
+    width: min(100%, 1200px);
+    box-shadow: 0 25px 40px rgba(0, 0, 0, 0.1),
       0 15px 15px rgba(0, 0, 0, 0.05);
+    animation: fadeIn 0.2s ease-in-out;
   }
 
   .header {
-    padding: 1.75rem 2.5rem 1.5rem 2.5rem;
-    background-color: #ffffff;
+    padding: 2rem 2rem 1rem 2rem;
   }
 
   .image {
@@ -95,7 +100,7 @@ const StyledWrapper = styled.div`
     align-items: center;
     width: 4rem;
     height: 4rem;
-    border-radius: 9999px;
+    border-radius: 50%;
   }
 
   .image svg {
@@ -104,16 +109,12 @@ const StyledWrapper = styled.div`
     height: 2rem;
   }
 
-  .content {
-    margin-top: 0.75rem;
-    text-align: center;
-  }
-
   .title {
     color: #111827;
-    font-size: 1.45rem;
+    font-size: 1.35rem;
     font-weight: 700;
-    line-height: 1.9rem;
+    margin-top: 1rem;
+    display: block;
   }
 
   .message {
@@ -123,31 +124,25 @@ const StyledWrapper = styled.div`
     line-height: 1.4rem;
   }
 
-  /* ✅ Side by side wide buttons */
   .actions {
-    margin-top: 1.25rem;
+    margin-top: 1.5rem;
     display: flex;
-    flex-direction: row;
     justify-content: center;
-    align-items: center;
-    gap: 1.5rem;
-    padding: 1.25rem 2.5rem 1.75rem;
+    gap: 1rem;
+    padding: 1rem 1.5rem 1.5rem;
     background-color: #f9fafb;
+    border-top: 1px solid #e5e7eb;
   }
 
   .desactivate,
   .cancel {
     flex: 1;
-    max-width: 400px;
-    height: 3.2rem; /* ✅ consistent height */
-    display: flex; /* ✅ center text */
-    justify-content: center;
-    align-items: center;
-    padding: 0 1.5rem;
-    font-size: 1.1rem;
-    font-weight: 600;
+    max-width: 160px;
+    height: 3rem;
     border-radius: 0.5rem;
+    font-weight: 600;
     cursor: pointer;
+    font-size: 1rem;
     transition: background-color 0.2s ease;
   }
 
@@ -170,6 +165,17 @@ const StyledWrapper = styled.div`
   .cancel:hover {
     background-color: #f3f4f6;
   }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: scale(0.96);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
 `;
 
-export default Card;
+export default ConfirmDeleteLog;

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import "../sidebar_contents_styles.css";
+import "../../sidebar_components/sidebar_contents_styles.css"; // ✅ external ECG CSS
 import { IoIosAdd } from "react-icons/io";
 import { ImLocation } from "react-icons/im";
 import { MdDeleteOutline } from "react-icons/md";
@@ -9,14 +10,20 @@ import AddDevice from "../../add-forms/Add-device";
 import { db, realtimeDB } from "../../../auth/firebase_auth";
 import { collection, onSnapshot } from "firebase/firestore";
 import { ref, onValue, off } from "firebase/database";
-import { LineChart, Line, XAxis, YAxis, ResponsiveContainer } from "recharts";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  ResponsiveContainer,
+  CartesianGrid,
+} from "recharts";
 import { handleDelete } from "./Devices_contents_functions/handleDelete";
 import { handleEdit } from "./Devices_contents_functions/handleEdit";
 import { handleEditSubmit } from "./Devices_contents_functions/handleEditSubmit";
 import { handleSendNotification } from "./Devices_contents_functions/handleSendNotification";
 import { getStatus } from "./Devices_contents_functions/getStatus";
 import { getColor } from "./Devices_contents_functions/getColor";
-import { createChartData } from "./Devices_contents_functions/createChartData";
 import SmsAlertSuccess from "../../custom-notification/for-sms-alert/sms-alert-success";
 import SmsAlertFailed from "../../custom-notification/for-sms-alert/sms-alert-failed";
 
@@ -24,6 +31,7 @@ const Devices_contents = ({ isAdmin }) => {
   const [showAddDevice, setShowAddDevice] = useState(false);
   const [devices, setDevices] = useState([]);
   const [sensorData, setSensorData] = useState({});
+  const [chartHistory, setChartHistory] = useState({});
   const [editingDevice, setEditingDevice] = useState(null);
   const [editData, setEditData] = useState({
     sensorName: "",
@@ -35,6 +43,7 @@ const Devices_contents = ({ isAdmin }) => {
   const [showSmsAlert, setShowSmsAlert] = useState(false);
   const [showSmsAlertFailed, setShowSmsAlertFailed] = useState(false);
 
+  // ✅ Load Firestore devices
   useEffect(() => {
     const unsub = onSnapshot(collection(db, "devices"), (snapshot) => {
       const updatedDevices = [];
@@ -46,6 +55,7 @@ const Devices_contents = ({ isAdmin }) => {
     return () => unsub();
   }, []);
 
+  // ✅ Realtime listener per device
   useEffect(() => {
     const listeners = [];
     devices.forEach((device) => {
@@ -60,6 +70,17 @@ const Devices_contents = ({ isAdmin }) => {
               timestamp: data.timestamp,
             },
           }));
+
+          setChartHistory((prev) => {
+            const prevData = prev[device.sensorName] || [];
+            const newPoint = {
+              time: new Date().toLocaleTimeString(),
+              value: data.distance,
+            };
+            const updated = [...prevData, newPoint];
+            if (updated.length > 30) updated.shift();
+            return { ...prev, [device.sensorName]: updated };
+          });
         }
       });
       listeners.push(() => off(sensorRef, "value", unsubscribe));
@@ -97,6 +118,7 @@ const Devices_contents = ({ isAdmin }) => {
           const distance = reading.distance || 0;
           const status = getStatus(distance);
           const color = getColor(distance);
+          const chartData = chartHistory[device.sensorName] || [];
 
           return (
             <div key={device.id} className="device-card shadow">
@@ -179,7 +201,6 @@ const Devices_contents = ({ isAdmin }) => {
                 Current Level: <b>{Math.floor(distance)} cm</b> / 600 cm
               </p>
 
-
               <div className="progress-container">
                 <div
                   className="progress-bar"
@@ -195,18 +216,26 @@ const Devices_contents = ({ isAdmin }) => {
                 <span>{Math.floor(distance)} cm</span>
               </div>
 
+              {/* ✅ Realtime ECG-like chart */}
               <div style={{ width: "100%", height: 70 }}>
                 <ResponsiveContainer>
-                  <LineChart data={createChartData(distance)}>
+                  <LineChart data={chartData}>
                     <XAxis dataKey="time" hide />
                     <YAxis domain={[0, 600]} hide />
+                    <CartesianGrid
+                      stroke="rgba(16, 16, 16, 0.2)"
+                      strokeDasharray="0"
+                      vertical={true}
+                      horizontal={true}
+                    />
                     <Line
                       type="monotone"
                       dataKey="value"
                       stroke={color}
                       strokeWidth={2}
                       dot={false}
-                      animationDuration={500}
+                      isAnimationActive={true}
+                      animationDuration={600}
                     />
                   </LineChart>
                 </ResponsiveContainer>

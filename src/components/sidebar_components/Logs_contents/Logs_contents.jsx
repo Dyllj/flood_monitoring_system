@@ -13,10 +13,9 @@ import { handleGenerateReport } from "./Logs_contents_functions/handleGenerateRe
 import { handleReset } from "./Logs_contents_functions/handleReset";
 import { handleSave } from "./Logs_contents_functions/handleSave";
 import { handleCancel } from "./Logs_contents_functions/handleCancel";
-import { handleDeleteLog } from "./Logs_contents_functions/handleDeleteLog"; // ✅ Imported external delete function
+import { handleDeleteLog } from "./Logs_contents_functions/handleDeleteLog";
 
 const Logs_contents = () => {
-  // ✅ State hooks
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -26,32 +25,26 @@ const Logs_contents = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isSearchFocused, setIsSearchFocused] = useState(false);
 
-  // Fetch sensor list and logs
   useEffect(() => {
     fetchSensors(setSensorsList);
   }, []);
+
   useEffect(() => {
     fetchLogs(setLogs);
   }, []);
 
-  // Apply filters (date range, sensor, search)
   const filteredLogs = filterLogs(logs, startDate, endDate, sensor, searchTerm);
 
   return (
     <>
-      <div className="logs-contents">{/* Background for Logs */}</div>
+      <div className="logs-contents"></div>
 
-      {/* Header */}
       <div className="logs_contents2">
         <TbLogs />
         <h2>Logs</h2>
       </div>
 
-      {/* ================================
-          🔍 Search Bar + Logs Table
-         ================================ */}
       <div className="logs-contents-container">
-        {/* 🔍 Search Bar */}
         <div className="search-container">
           <TbSearch
             className={`search-icon ${isSearchFocused ? "icon-right" : "icon-left"}`}
@@ -66,7 +59,6 @@ const Logs_contents = () => {
           />
         </div>
 
-        {/* Logs Table */}
         {filteredLogs.length === 0 ? (
           <p className="no-logs-msg">No logs available.</p>
         ) : (
@@ -79,7 +71,7 @@ const Logs_contents = () => {
                 <th>Distance</th>
                 <th>Status</th>
                 <th>Type</th>
-                <th>Action</th> {/* 🆕 Added Action column */}
+                <th>Action</th>
               </tr>
             </thead>
             <tbody>
@@ -93,7 +85,7 @@ const Logs_contents = () => {
                   <td>{log.type}</td>
                   <td>
                     <button
-                      className="delete-btn"
+                      className="delete-btn" id="Delete-btn"
                       onClick={() => handleDeleteLog(log.id, setLogs)}
                       title="Delete log"
                     >
@@ -107,9 +99,6 @@ const Logs_contents = () => {
         )}
       </div>
 
-      {/* ================================
-          ⚙️ Filter & Report Buttons
-         ================================ */}
       <div className="report">
         <button
           className="filter-btn"
@@ -125,9 +114,6 @@ const Logs_contents = () => {
         </button>
       </div>
 
-      {/* ================================
-          📅 Filter Modal
-         ================================ */}
       {showFilterModal && (
         <div
           className="filter-modal-overlay"
@@ -137,7 +123,6 @@ const Logs_contents = () => {
             className="filter-modal-container"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Modal Header with Icon */}
             <div className="filter-modal-header">
               <TbLogs size={22} />
               <h3>Log Filter</h3>
