@@ -69,7 +69,6 @@ const Overlay = styled.div`
   display: flex;
   justify-content: center;
   align-items: center;
-
   z-index: 9999;
 `;
 
@@ -90,6 +89,7 @@ const StyledWrapper = styled.div`
 
   .header {
     padding: 2rem 2rem 1rem 2rem;
+    background-color: #ffffff;
   }
 
   .image {

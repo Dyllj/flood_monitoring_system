@@ -75,8 +75,7 @@ const StyledWrapper = styled.div`
     border-radius: 0.75rem;
     text-align: left;
     max-width: 1200px;
-    width: min(95%, 1200px);
-
+    width: min(100%, 1200px);
     box-shadow:
       0 25px 40px rgba(0, 0, 0, 0.1),
       0 15px 15px rgba(0, 0, 0, 0.05);
