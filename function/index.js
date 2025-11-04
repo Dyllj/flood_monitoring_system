@@ -1,13 +1,12 @@
-const { onCall, HttpsError } = require("firebase-functions/v2/https");
-const { onValueWritten } = require("firebase-functions/v2/database");
+const express = require("express");
 const admin = require("firebase-admin");
 const axios = require("axios");
-const rtdb = admin.database();
 
 admin.initializeApp();
 const firestoreDb = admin.firestore();
+const rtdb = admin.database();
 
-// ✅ Get Semaphore API key and sender from environment variables
+// Environment variables
 const SEMAPHORE_API_KEY = process.env.SEMAPHORE_API_KEY;
 const SENDER_NAME = process.env.SENDER_NAME || "MolaveFlood";
 
@@ -27,7 +26,6 @@ async function sendSemaphoreSMS(number, message) {
         sendername: SENDER_NAME,
       }
     );
-
     console.log(`✅ SMS sent to ${number}:`, response.data);
     return response.data;
   } catch (err) {
@@ -44,13 +42,19 @@ function getStatus(distance) {
 }
 
 /////////////////////
-// MANUAL ALERT
+// EXPRESS APP
 /////////////////////
-exports.sendFloodAlertSMS = onCall({ region: "asia-southeast1" }, async (request) => {
-  const { location: reqLocation, distance, sensorName: reqSensorName } = request.data;
+const app = express();
+app.use(express.json());
+
+// -------------------
+// Manual SMS Alert
+// -------------------
+app.post("/sendFloodAlertSMS", async (req, res) => {
+  const { location: reqLocation, distance, sensorName: reqSensorName } = req.body;
 
   if (distance === undefined || !reqSensorName) {
-    throw new HttpsError("invalid-argument", "Missing required parameters: distance or sensorName.");
+    return res.status(400).json({ error: "Missing required parameters: distance or sensorName." });
   }
 
   try {
@@ -79,7 +83,9 @@ exports.sendFloodAlertSMS = onCall({ region: "asia-southeast1" }, async (request
     console.log("📨 Sending manual SMS alert:\n", message);
 
     const personnelSnap = await firestoreDb.collection("Authorized_personnel").get();
-    if (personnelSnap.empty) throw new HttpsError("not-found", "No authorized personnel found.");
+    if (personnelSnap.empty) {
+      return res.status(404).json({ error: "No authorized personnel found." });
+    }
 
     const results = await Promise.all(
       personnelSnap.docs.map(async (doc) => {
@@ -113,47 +119,46 @@ exports.sendFloodAlertSMS = onCall({ region: "asia-southeast1" }, async (request
     });
 
     console.log(`✅ Manual SMS alert sent successfully for ${sensorName}`);
-    return { success: true, results };
+    return res.json({ success: true, results });
   } catch (error) {
     console.error("❌ Error sending manual alert:", error.message);
-    throw new HttpsError("internal", "Failed to send SMS alert.");
+    return res.status(500).json({ error: "Failed to send SMS alert." });
   }
 });
 
-/////////////////////
-// AUTOMATIC ALERT
-/////////////////////
-exports.autoFloodAlert = onValueWritten(
-  { ref: "/realtime/{deviceName}", region: "asia-southeast1" },
-  async (event) => {
-    const deviceName = event.params.deviceName;
-    const newData = event.data.after.val();
-    if (!newData || newData.distance === undefined) return;
+// -------------------
+// Automatic Alert (Database Trigger Simulation)
+// -------------------
+app.post("/autoFloodAlert", async (req, res) => {
+  const { deviceName, distance } = req.body;
 
-    const distance = newData.distance;
-    const roundedDistance = Math.round(distance);
-    const status = getStatus(distance);
-    if (status === "Normal") {
-      console.log(`✅ Normal water level for ${deviceName}: ${roundedDistance} cm`);
-      return null;
-    }
+  if (!deviceName || distance === undefined) {
+    return res.status(400).json({ error: "Missing required parameters: deviceName or distance." });
+  }
 
-    console.log(`🚨 High water level detected at ${deviceName}: ${roundedDistance} cm (${status})`);
+  const roundedDistance = Math.round(distance);
+  const status = getStatus(distance);
+  if (status === "Normal") {
+    console.log(`✅ Normal water level for ${deviceName}: ${roundedDistance} cm`);
+    return res.json({ message: "Normal water level. No alert sent." });
+  }
 
-    const alertRef = rtdb.ref(`alerts/${deviceName}`);
-    const alertSnap = await alertRef.once("value");
-    if (alertSnap.exists() && alertSnap.val().alert_sent) {
-      console.log(`ℹ️ Alert already sent for ${deviceName}. Skipping duplicate.`);
-      return null;
-    }
+  console.log(`🚨 High water level detected at ${deviceName}: ${roundedDistance} cm (${status})`);
 
-    try {
-      const deviceDoc = await firestoreDb.collection("devices").doc(deviceName).get();
-      const deviceData = deviceDoc.exists ? deviceDoc.data() : {};
-      const location = deviceData.location || "Unknown";
-      const sensorName = deviceData.sensorName || deviceName;
+  const alertRef = rtdb.ref(`alerts/${deviceName}`);
+  const alertSnap = await alertRef.once("value");
+  if (alertSnap.exists() && alertSnap.val().alert_sent) {
+    console.log(`ℹ️ Alert already sent for ${deviceName}. Skipping duplicate.`);
+    return res.json({ message: "Alert already sent. Skipped duplicate." });
+  }
 
-      const message = `⚠️ AUTOMATIC FLOOD ALERT ⚠️
+  try {
+    const deviceDoc = await firestoreDb.collection("devices").doc(deviceName).get();
+    const deviceData = deviceDoc.exists ? deviceDoc.data() : {};
+    const location = deviceData.location || "Unknown";
+    const sensorName = deviceData.sensorName || deviceName;
+
+    const message = `⚠️ AUTOMATIC FLOOD ALERT ⚠️
 📍 Location: ${location}
 🛰️ Sensor: ${sensorName}
 📏 Water Level: ${roundedDistance} cm
@@ -162,44 +167,46 @@ exports.autoFloodAlert = onValueWritten(
 
 - Sent by ${SENDER_NAME}`;
 
-      console.log("📨 Sending automatic SMS alert:\n", message);
+    console.log("📨 Sending automatic SMS alert:\n", message);
 
-      const personnelSnap = await firestoreDb.collection("Authorized_personnel").get();
-      await Promise.all(
-        personnelSnap.docs.map(async (doc) => {
-          const person = doc.data();
-          if (person.Phone_number) {
-            const number = person.Phone_number.replace(/^0/, "63");
-            const smsResponse = await sendSemaphoreSMS(number, message);
-            console.log(`✅ Auto SMS sent to ${person.Contact_name}`, smsResponse);
-          }
-        })
-      );
+    const personnelSnap = await firestoreDb.collection("Authorized_personnel").get();
+    await Promise.all(
+      personnelSnap.docs.map(async (doc) => {
+        const person = doc.data();
+        if (person.Phone_number) {
+          const number = person.Phone_number.replace(/^0/, "63");
+          await sendSemaphoreSMS(number, message);
+          console.log(`✅ Auto SMS sent to ${person.Contact_name}`);
+        }
+      })
+    );
 
-      await alertRef.set({
-        alert_sent: true,
-        auto_sent: true,
-        distance: roundedDistance,
-        location,
-        status,
-        timestamp: Date.now(),
-      });
+    await alertRef.set({
+      alert_sent: true,
+      auto_sent: true,
+      distance: roundedDistance,
+      location,
+      status,
+      timestamp: Date.now(),
+    });
 
-      await firestoreDb.collection("Alert_logs").add({
-        type: "Automatic",
-        location,
-        sensorName,
-        distance: roundedDistance,
-        status,
-        timestamp: admin.firestore.FieldValue.serverTimestamp(),
-        message,
-      });
+    await firestoreDb.collection("Alert_logs").add({
+      type: "Automatic",
+      location,
+      sensorName,
+      distance: roundedDistance,
+      status,
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      message,
+    });
 
-      console.log(`✅ Automatic alert successfully sent for ${sensorName}`);
-    } catch (err) {
-      console.error("❌ Auto alert failed:", err.message);
-    }
-
-    return null;
+    console.log(`✅ Automatic alert successfully sent for ${sensorName}`);
+    return res.json({ success: true });
+  } catch (err) {
+    console.error("❌ Auto alert failed:", err.message);
+    return res.status(500).json({ error: "Failed to send automatic alert." });
   }
-);
+});
+
+// Export as HTTP function
+exports.sendFloodAlertSMSApp = require("firebase-functions/v2/https").onRequest(app);
