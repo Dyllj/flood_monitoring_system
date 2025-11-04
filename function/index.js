@@ -44,7 +44,7 @@ function getStatus(distance) {
 // ================================================================
 // 🔸 Function 1: MANUAL FLOOD ALERT
 // ================================================================
-exports.sendFloodAlertSMS = onCall({ region: "us-central1" }, async (request) => {
+exports.sendFloodAlertSMS = onCall({ region: "asia-southeast1" }, async (request) => {
   const { location: reqLocation, distance, sensorName: reqSensorName } = request.data;
 
   if (distance === undefined || !reqSensorName) {
