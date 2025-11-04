@@ -6,7 +6,7 @@ const Home_contents = () => {
       <div className="home-bg"></div>
       <div className="home_content">
         <h2 className='h2'>MOLAVE MUNICIPAL DISASTER RISK REDUCTION MANAGEMENT OFFICE</h2>
-        <h4 className='h4'>Your'e Safety is our Top Priority</h4>
+        <h4 className='h4'>Your Safety is our Top Priority</h4>
       </div>
     </>
   );
