@@ -1,5 +1,5 @@
 import { collection, getDocs } from "firebase/firestore";
-import { db } from "../../../auth/firebase_auth";
+import { db } from "../../../../auth/firebase_auth";
 
 export const fetchSensors = async (setSensorsList) => {
   const devicesRef = collection(db, "devices");

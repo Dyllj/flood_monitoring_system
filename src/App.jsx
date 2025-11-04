@@ -6,7 +6,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Home_contents from './components/sidebar_components/Home_contents';
 import Devices_contents from './components/sidebar_components/Devices_contents/Devices_contents';
 import ContactSettings_contents from './components/sidebar_components/ContactSettigns_contents/ContactSettings_contents';
-import Logs_contents from './components/sidebar_components/Logs_contents';
+import Logs_contents from "./components/sidebar_components/Logs_contents/Logs_contents";
 import LoginForm from './components/login/Login-form';
 import { FiLogIn } from "react-icons/fi";
 import { onAuthStateChanged, signOut } from "firebase/auth";

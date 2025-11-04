@@ -176,8 +176,9 @@ const Devices_contents = ({ isAdmin }) => {
               </div>
 
               <p className="level-text">
-                Current Level: <b>{distance.toFixed(2)} cm</b> / 600 cm
+                Current Level: <b>{Math.floor(distance)} cm</b> / 600 cm
               </p>
+
 
               <div className="progress-container">
                 <div
@@ -191,7 +192,7 @@ const Devices_contents = ({ isAdmin }) => {
 
               <div className="alert-row">
                 <span>⚠ Alert Level</span>
-                <span>{distance.toFixed(2)} cm</span>
+                <span>{Math.floor(distance)} cm</span>
               </div>
 
               <div style={{ width: "100%", height: 70 }}>

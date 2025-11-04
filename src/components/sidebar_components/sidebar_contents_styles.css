@@ -747,3 +747,27 @@ body {
   text-overflow: ellipsis;
   overflow: hidden;
 }
+/* ===============================
+   🗑️ Delete Button Styles
+=============================== */
+.delete-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #e74c3c;
+  font-size: 1.3rem;
+  transition: color 0.2s ease, transform 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 1.5rem;
+}
+
+.delete-btn:hover {
+  color: #ff4d4d;
+  transform: scale(1.2);
+}
+
+.delete-btn:active {
+  transform: scale(0.95);
+}
