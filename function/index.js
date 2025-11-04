@@ -2,39 +2,30 @@ const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { onValueWritten } = require("firebase-functions/v2/database");
 const admin = require("firebase-admin");
 const axios = require("axios");
-const qs = require("qs");
-const functions = require("firebase-functions");
+const rtdb = admin.database();
 
 admin.initializeApp();
 const firestoreDb = admin.firestore();
-const rtdb = admin.database();
 
-// Helper to get Semaphore config safely
-function getSemaphoreConfig() {
-  const cfg = functions.config()?.semaphore || {};
-  const apiKey = cfg.apikey || cfg.key;
-  const senderName = cfg.sender || cfg.sendername || "MolaveFlood";
+// ✅ Get Semaphore API key and sender from environment variables
+const SEMAPHORE_API_KEY = process.env.SEMAPHORE_API_KEY;
+const SENDER_NAME = process.env.SENDER_NAME || "MolaveFlood";
 
-  if (!apiKey) {
-    throw new Error("Semaphore API key is not configured.");
-  }
-  return { apiKey, senderName };
+if (!SEMAPHORE_API_KEY) {
+  console.error("⚠️ SEMAPHORE_API_KEY is not set in environment variables!");
 }
 
-// Helper function to send SMS via Semaphore
+// Helper to send SMS via Semaphore
 async function sendSemaphoreSMS(number, message) {
   try {
-    const { apiKey, senderName } = getSemaphoreConfig();
-
     const response = await axios.post(
       "https://api.semaphore.co/api/v4/messages",
-      qs.stringify({
-        api_key: apiKey,
+      {
+        apikey: SEMAPHORE_API_KEY,
         number,
         message,
-        sendername: senderName,
-      }),
-      { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
+        sendername: SENDER_NAME,
+      }
     );
 
     console.log(`✅ SMS sent to ${number}:`, response.data);
@@ -83,7 +74,7 @@ exports.sendFloodAlertSMS = onCall({ region: "asia-southeast1" }, async (request
 📊 Status: ${status}
 ⏰ Time: ${new Date().toLocaleString("en-PH", { timeZone: "Asia/Manila" })}
 
-- Sent by Molave Flood Monitoring System`;
+- Sent by ${SENDER_NAME}`;
 
     console.log("📨 Sending manual SMS alert:\n", message);
 
@@ -169,7 +160,7 @@ exports.autoFloodAlert = onValueWritten(
 📊 Status: ${status}
 ⏰ Time: ${new Date().toLocaleString("en-PH", { timeZone: "Asia/Manila" })}
 
-- Sent by Molave Flood Monitoring System`;
+- Sent by ${SENDER_NAME}`;
 
       console.log("📨 Sending automatic SMS alert:\n", message);
 
