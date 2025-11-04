@@ -10,14 +10,7 @@ import AddDevice from "../../add-forms/Add-device";
 import { db, realtimeDB } from "../../../auth/firebase_auth";
 import { collection, onSnapshot } from "firebase/firestore";
 import { ref, onValue, off } from "firebase/database";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  ResponsiveContainer,
-  CartesianGrid,
-} from "recharts";
+import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, CartesianGrid } from "recharts";
 import { handleDelete } from "./Devices_contents_functions/handleDelete";
 import { handleEdit } from "./Devices_contents_functions/handleEdit";
 import { handleEditSubmit } from "./Devices_contents_functions/handleEditSubmit";
@@ -245,6 +238,7 @@ const Devices_contents = ({ isAdmin }) => {
         })}
       </div>
 
+      {/* Add Device Modal */}
       {showAddDevice && (
         <div className="modal-overlay" onClick={() => setShowAddDevice(false)}>
           <div className="modal-container" onClick={(e) => e.stopPropagation()}>
@@ -253,6 +247,7 @@ const Devices_contents = ({ isAdmin }) => {
         </div>
       )}
 
+      {/* Edit Device Modal */}
       {editingDevice && (
         <div
           className="modal-overlay"
@@ -267,7 +262,12 @@ const Devices_contents = ({ isAdmin }) => {
             <h2>Edit Device Metadata</h2>
             <form
               onSubmit={(e) =>
-                handleEditSubmit(e, editingDevice, editData, setEditingDevice)
+                handleEditSubmit(
+                  e,
+                  editingDevice,
+                  editData,
+                  setEditingDevice
+                )
               }
             >
               <label className="sensor-label">
