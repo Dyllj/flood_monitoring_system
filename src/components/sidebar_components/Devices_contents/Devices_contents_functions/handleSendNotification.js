@@ -1,12 +1,7 @@
-import { getFunctions, httpsCallable } from "firebase/functions";
-import { app } from "../../../../auth/firebase_auth";
+import { sendFloodAlertSMS } from "../../../../auth/firebase_auth";
 
-// ✅ Sends SMS notifications via Firebase Cloud Functions
 export const handleSendNotification = async (sensorName, deviceLocation, distance) => {
   try {
-    const functions = getFunctions(app);
-    const sendFloodAlertSMS = httpsCallable(functions, "sendFloodAlertSMS");
-
     const response = await sendFloodAlertSMS({
       sensorName,
       location: deviceLocation,
