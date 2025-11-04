@@ -4,6 +4,7 @@ const admin = require("firebase-admin");
 const axios = require("axios");
 const { onRequest } = require("firebase-functions/v2/https");
 
+// Initialize Firebase Admin
 admin.initializeApp();
 const firestoreDb = admin.firestore();
 const rtdb = admin.database();
@@ -43,13 +44,13 @@ function getStatus(distance) {
   return "Normal";
 }
 
-// Express app
+// Create Express app
 const app = express();
 app.use(express.json());
 
-/////////////////////////
+// --------------------
 // MANUAL ALERT
-/////////////////////////
+// --------------------
 app.post("/sendFloodAlertSMS", async (req, res) => {
   const { location: reqLocation, distance, sensorName: reqSensorName } = req.body;
 
@@ -123,14 +124,14 @@ app.post("/sendFloodAlertSMS", async (req, res) => {
     console.log(`✅ Manual alert sent successfully for ${sensorName}`);
     return res.json({ success: true, results });
   } catch (err) {
-    console.error("❌ Manual alert error:", err.message);
+    console.error("❌ Manual alert error:", err);
     return res.status(500).json({ error: "Failed to send manual alert." });
   }
 });
 
-/////////////////////////
+// --------------------
 // AUTOMATIC ALERT
-/////////////////////////
+// --------------------
 app.post("/autoFloodAlert", async (req, res) => {
   const { deviceName, distance } = req.body;
 
@@ -208,10 +209,10 @@ app.post("/autoFloodAlert", async (req, res) => {
     console.log(`✅ Automatic alert successfully sent for ${sensorName}`);
     return res.json({ success: true });
   } catch (err) {
-    console.error("❌ Automatic alert failed:", err.message);
+    console.error("❌ Automatic alert failed:", err);
     return res.status(500).json({ error: "Failed to send automatic alert." });
   }
 });
 
-// Export as Cloud Function (v2) using Express
-exports.sendFloodAlertSMSApp = onRequest(app);
+// ✅ Export Express app as Cloud Function v2 (HTTP)
+exports.sendFloodAlertSMSApp = onRequest(app, { region: "asia-southeast1" });
