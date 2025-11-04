@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Checkout your repo
+      # Checkout the repo
       - uses: actions/checkout@v3
 
       # Install Node.js 22 (required for Vite)
@@ -18,11 +18,13 @@ jobs:
         with:
           node-version: 22
 
-      # Install dependencies and build
+      # Install dependencies
       - run: npm ci
+
+      # Build Vite project
       - run: npm run build
 
-      # Optional: confirm dist folder exists
+      # Confirm dist folder exists
       - run: ls -la dist
 
       # Deploy to Firebase Hosting
