@@ -8,7 +8,7 @@ admin.initializeApp();
 const firestoreDb = admin.firestore();
 const rtdb = admin.database();
 
-// ✅ Helper function to send SMS via Semaphore
+// Helper: send SMS via Semaphore
 async function sendSemaphoreSMS(apiKey, number, message, senderName = "MolaveFlood") {
   try {
     const response = await axios.post(
@@ -23,14 +23,14 @@ async function sendSemaphoreSMS(apiKey, number, message, senderName = "MolaveFlo
     );
 
     console.log(`✅ Semaphore response for ${number}:`, response.data);
-    return response.data; // Return full response
+    return response.data;
   } catch (err) {
     console.error(`❌ Failed to send SMS to ${number}:`, err.response?.data || err.message);
     return null;
   }
 }
 
-// ✅ Helper function to get status from water level
+// Helper: get water level status
 function getStatus(distance) {
   if (distance >= 400) return "Critical";
   if (distance >= 200) return "Elevated";
@@ -44,12 +44,12 @@ exports.sendFloodAlertSMS = onCall({ region: "asia-southeast1" }, async (request
   const { location: reqLocation, distance, sensorName: reqSensorName } = request.data;
 
   if (distance === undefined || !reqSensorName) {
-    throw new HttpsError("invalid-argument", "Missing required parameters: distance or sensorName.");
+    throw new HttpsError("invalid-argument", "Missing required parameters.");
   }
 
   const apiKey = process.env.SEMAPHORE_API_KEY || process.env.FIREBASE_CONFIG?.semaphore?.key;
   const senderName = process.env.SENDER_NAME || process.env.FIREBASE_CONFIG?.semaphore?.sender || "MolaveFlood";
-  if (!apiKey) throw new HttpsError("internal", "SMS provider not configured properly.");
+  if (!apiKey) throw new HttpsError("internal", "SMS provider not configured.");
 
   try {
     let location = reqLocation;
@@ -65,8 +65,8 @@ exports.sendFloodAlertSMS = onCall({ region: "asia-southeast1" }, async (request
     const status = getStatus(distance);
     const roundedDistance = Math.round(distance);
 
-    const message =
-`🚨 FLOOD ALERT (MANUAL NOTICE)
+    const message = 
+`🚨 FLOOD ALERT (MANUAL)
 📍 Location: ${location}
 🛰️ Sensor: ${sensorName}
 📏 Water Level: ${roundedDistance} cm
@@ -92,6 +92,7 @@ exports.sendFloodAlertSMS = onCall({ region: "asia-southeast1" }, async (request
       })
     );
 
+    // Realtime DB update (optional)
     await rtdb.ref(`alerts/${sensorName}`).set({
       alert_sent: true,
       auto_sent: false,
@@ -101,6 +102,7 @@ exports.sendFloodAlertSMS = onCall({ region: "asia-southeast1" }, async (request
       timestamp: Date.now(),
     });
 
+    // Firestore log with server timestamp
     await firestoreDb.collection("Alert_logs").add({
       type: "Manual",
       location,
@@ -156,8 +158,8 @@ exports.autoFloodAlert = onValueWritten(
       const location = deviceData.location || "Unknown";
       const sensorName = deviceData.sensorName || deviceName;
 
-      const message =
-`⚠️ AUTOMATIC FLOOD ALERT ⚠️
+      const message = 
+`⚠️ AUTOMATIC FLOOD ALERT
 📍 Location: ${location}
 🛰️ Sensor: ${sensorName}
 📏 Water Level: ${roundedDistance} cm
