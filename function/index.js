@@ -188,7 +188,7 @@ exports.autoFloodAlert = onValueWritten(
 
     const distance = newData.distance;
     const roundedDistance = Math.round(distance); // ✅ Convert to whole number
-    const db = admin.database();
+    const rtdb = admin.database();
     const status = getStatus(distance);
 
     // ✅ Skip alert if water level is Normal
