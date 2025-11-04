@@ -1,34 +1,45 @@
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { onValueWritten } = require("firebase-functions/v2/database");
 const admin = require("firebase-admin");
-const { FieldValue } = require("firebase-admin/firestore");
 const axios = require("axios");
+const qs = require("qs");
 
 admin.initializeApp();
 const firestoreDb = admin.firestore();
 const rtdb = admin.database();
 
+// ✅ Helper function to send SMS via Semaphore
 async function sendSemaphoreSMS(apiKey, number, message, senderName = "MolaveFlood") {
   try {
-    const response = await axios.post("https://api.semaphore.co/api/v4/messages", {
-      api_key: apiKey,
-      number,
-      message,
-      sendername: senderName,
-    });
-    return response.status;
+    const response = await axios.post(
+      "https://api.semaphore.co/api/v4/messages",
+      qs.stringify({
+        api_key: apiKey,
+        number,
+        message,
+        sendername: senderName,
+      }),
+      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+    );
+
+    console.log(`✅ Semaphore response for ${number}:`, response.data);
+    return response.data; // Return full response
   } catch (err) {
     console.error(`❌ Failed to send SMS to ${number}:`, err.response?.data || err.message);
     return null;
   }
 }
 
+// ✅ Helper function to get status from water level
 function getStatus(distance) {
   if (distance >= 400) return "Critical";
   if (distance >= 200) return "Elevated";
   return "Normal";
 }
 
+/////////////////////
+// MANUAL ALERT
+/////////////////////
 exports.sendFloodAlertSMS = onCall({ region: "asia-southeast1" }, async (request) => {
   const { location: reqLocation, distance, sensorName: reqSensorName } = request.data;
 
@@ -40,36 +51,32 @@ exports.sendFloodAlertSMS = onCall({ region: "asia-southeast1" }, async (request
   const senderName = process.env.SENDER_NAME || process.env.FIREBASE_CONFIG?.semaphore?.sender || "MolaveFlood";
   if (!apiKey) throw new HttpsError("internal", "SMS provider not configured properly.");
 
-  let location = reqLocation;
-  let sensorName = reqSensorName;
+  try {
+    let location = reqLocation;
+    let sensorName = reqSensorName;
 
-  const deviceDoc = await firestoreDb.collection("devices").doc(sensorName).get();
-  if (deviceDoc.exists) {
-    const data = deviceDoc.data();
-    location = location || data.location || "Unknown";
-    sensorName = data.sensorName || sensorName;
-  }
+    const deviceDoc = await firestoreDb.collection("devices").doc(sensorName).get();
+    if (deviceDoc.exists) {
+      const data = deviceDoc.data();
+      location = location || data.location || "Unknown";
+      sensorName = data.sensorName || sensorName;
+    }
 
-  const status = getStatus(distance);
-  const roundedDistance = Math.round(distance);
+    const status = getStatus(distance);
+    const roundedDistance = Math.round(distance);
 
-  const message =
+    const message =
 `🚨 FLOOD ALERT (MANUAL NOTICE)
-A flood alert has been triggered manually.
-
 📍 Location: ${location}
 🛰️ Sensor: ${sensorName}
 📏 Water Level: ${roundedDistance} cm
 📊 Status: ${status}
 ⏰ Time: ${new Date().toLocaleString("en-PH", { timeZone: "Asia/Manila" })}
 
-Please verify the situation immediately and take appropriate safety measures.
-
 - Sent by Molave Flood Monitoring System`;
 
-  console.log("📨 Sending manual SMS alert with message:\n", message);
+    console.log("📨 Sending manual SMS alert:\n", message);
 
-  try {
     const personnelSnap = await firestoreDb.collection("Authorized_personnel").get();
     if (personnelSnap.empty) throw new HttpsError("not-found", "No authorized personnel found.");
 
@@ -78,8 +85,8 @@ Please verify the situation immediately and take appropriate safety measures.
         const person = doc.data();
         if (person.Phone_number) {
           const number = person.Phone_number.replace(/^0/, "63");
-          const statusCode = await sendSemaphoreSMS(apiKey, number, message, senderName);
-          return { name: person.Contact_name, status: statusCode };
+          const smsResponse = await sendSemaphoreSMS(apiKey, number, message, senderName);
+          return { name: person.Contact_name, smsResponse };
         }
         return null;
       })
@@ -100,7 +107,7 @@ Please verify the situation immediately and take appropriate safety measures.
       sensorName,
       distance: roundedDistance,
       status,
-      timestamp: FieldValue.serverTimestamp(),
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
       message,
     });
 
@@ -113,18 +120,19 @@ Please verify the situation immediately and take appropriate safety measures.
   }
 });
 
+/////////////////////
+// AUTOMATIC ALERT
+/////////////////////
 exports.autoFloodAlert = onValueWritten(
   { ref: "/realtime/{deviceName}", region: "asia-southeast1" },
   async (event) => {
     const deviceName = event.params.deviceName;
     const newData = event.data.after.val();
-
     if (!newData || newData.distance === undefined) return;
 
     const distance = newData.distance;
     const roundedDistance = Math.round(distance);
     const status = getStatus(distance);
-
     if (status === "Normal") {
       console.log(`✅ Normal water level for ${deviceName}: ${roundedDistance} cm`);
       return null;
@@ -150,19 +158,15 @@ exports.autoFloodAlert = onValueWritten(
 
       const message =
 `⚠️ AUTOMATIC FLOOD ALERT ⚠️
-An automatic alert has been detected by the flood monitoring system.
-
 📍 Location: ${location}
 🛰️ Sensor: ${sensorName}
 📏 Water Level: ${roundedDistance} cm
 📊 Status: ${status}
 ⏰ Time: ${new Date().toLocaleString("en-PH", { timeZone: "Asia/Manila" })}
 
-Please assess the area immediately and implement necessary safety precautions.
-
 - Sent by Molave Flood Monitoring System`;
 
-      console.log("📨 Sending automatic SMS alert with message:\n", message);
+      console.log("📨 Sending automatic SMS alert:\n", message);
 
       const personnelSnap = await firestoreDb.collection("Authorized_personnel").get();
       await Promise.all(
@@ -170,8 +174,8 @@ Please assess the area immediately and implement necessary safety precautions.
           const person = doc.data();
           if (person.Phone_number) {
             const number = person.Phone_number.replace(/^0/, "63");
-            await sendSemaphoreSMS(apiKey, number, message, senderName);
-            console.log(`✅ Auto SMS sent to ${person.Contact_name}`);
+            const smsResponse = await sendSemaphoreSMS(apiKey, number, message, senderName);
+            console.log(`✅ Auto SMS sent to ${person.Contact_name}`, smsResponse);
           }
         })
       );
@@ -191,7 +195,7 @@ Please assess the area immediately and implement necessary safety precautions.
         sensorName,
         distance: roundedDistance,
         status,
-        timestamp: FieldValue.serverTimestamp(),
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),
         message,
       });
 
