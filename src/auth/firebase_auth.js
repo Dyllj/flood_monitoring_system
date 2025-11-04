@@ -31,44 +31,33 @@ const firebaseConfig = {
 
 // ================================================================
 // 🔹 Initialize Firebase App
-// Creates and configures the core Firebase instance
 // ================================================================
 export const app = initializeApp(firebaseConfig);
 
 // ================================================================
 // 🔹 Authentication Setup
-// - Uses browserLocalPersistence to keep users logged in across refreshes
 // ================================================================
 export const auth = getAuth(app);
 setPersistence(auth, browserLocalPersistence);
 
 // ================================================================
 // 🔹 Firestore Database
-// - Used for storing structured app data (devices, logs, personnel, etc.)
 // ================================================================
 export const db = getFirestore(app);
 
 // ================================================================
 // 🔹 Realtime Database
-// - Used for live sensor readings and real-time flood level updates
 // ================================================================
 export const realtimeDB = getDatabase(app);
 
 // ================================================================
 // 🔹 Cloud Functions (Region: us-central1)
-// - Used to call backend logic such as sending SMS alerts
 // ================================================================
 export const functions = getFunctions(app, "us-central1");
 
 // ================================================================
 // 🔸 LOCAL DEVELOPMENT SUPPORT
-// - Connects your frontend to the Firebase Functions emulator
-// - Avoids CORS errors and allows safe testing without real SMS sending
-//
-// ▶ How to use:
-// Run this in your terminal (inside the "functions" folder):
-//    npm run serve
-// Then visit your app on localhost — this script connects automatically
+// - Connects frontend to Functions emulator
 // ================================================================
 if (window && window.location && window.location.hostname === "localhost") {
   try {
@@ -80,8 +69,10 @@ if (window && window.location && window.location.hostname === "localhost") {
 }
 
 // ================================================================
-// 🔹 Callable Cloud Function Wrapper
-// - Exposes the `sendFloodAlertSMS` backend function for frontend use
-// - Example: sendFloodAlertSMS({ sensorName: 'sensor01', distance: 240 })
+// 🔹 Callable Cloud Function Wrappers
 // ================================================================
+
+// Sends manual flood alert
 export const sendFloodAlertSMS = httpsCallable(functions, "sendFloodAlertSMS");
+
+// Future: you can add more callable functions here if needed
