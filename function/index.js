@@ -1,6 +1,8 @@
+// index.js
 const express = require("express");
 const admin = require("firebase-admin");
 const axios = require("axios");
+const { onRequest } = require("firebase-functions/v2/https");
 
 admin.initializeApp();
 const firestoreDb = admin.firestore();
@@ -11,7 +13,7 @@ const SEMAPHORE_API_KEY = process.env.SEMAPHORE_API_KEY;
 const SENDER_NAME = process.env.SENDER_NAME || "MolaveFlood";
 
 if (!SEMAPHORE_API_KEY) {
-  console.error("⚠️ SEMAPHORE_API_KEY is not set in environment variables!");
+  console.warn("⚠️ SEMAPHORE_API_KEY is not set. SMS sending will fail!");
 }
 
 // Helper to send SMS via Semaphore
@@ -26,7 +28,7 @@ async function sendSemaphoreSMS(number, message) {
         sendername: SENDER_NAME,
       }
     );
-    console.log(`✅ SMS sent to ${number}:`, response.data);
+    console.log(`✅ SMS sent to ${number}`);
     return response.data;
   } catch (err) {
     console.error(`❌ Failed to send SMS to ${number}:`, err.response?.data || err.message);
@@ -34,26 +36,24 @@ async function sendSemaphoreSMS(number, message) {
   }
 }
 
-// Helper function to get flood status
+// Helper to determine flood status
 function getStatus(distance) {
   if (distance >= 400) return "Critical";
   if (distance >= 200) return "Elevated";
   return "Normal";
 }
 
-/////////////////////
-// EXPRESS APP
-/////////////////////
+// Express app
 const app = express();
 app.use(express.json());
 
-// -------------------
-// Manual SMS Alert
-// -------------------
+/////////////////////////
+// MANUAL ALERT
+/////////////////////////
 app.post("/sendFloodAlertSMS", async (req, res) => {
   const { location: reqLocation, distance, sensorName: reqSensorName } = req.body;
 
-  if (distance === undefined || !reqSensorName) {
+  if (!reqSensorName || distance === undefined) {
     return res.status(400).json({ error: "Missing required parameters: distance or sensorName." });
   }
 
@@ -80,7 +80,7 @@ app.post("/sendFloodAlertSMS", async (req, res) => {
 
 - Sent by ${SENDER_NAME}`;
 
-    console.log("📨 Sending manual SMS alert:\n", message);
+    console.log("📨 Sending manual SMS alert:", message);
 
     const personnelSnap = await firestoreDb.collection("Authorized_personnel").get();
     if (personnelSnap.empty) {
@@ -99,6 +99,7 @@ app.post("/sendFloodAlertSMS", async (req, res) => {
       })
     );
 
+    // Update Realtime Database
     await rtdb.ref(`alerts/${sensorName}`).set({
       alert_sent: true,
       auto_sent: false,
@@ -108,6 +109,7 @@ app.post("/sendFloodAlertSMS", async (req, res) => {
       timestamp: Date.now(),
     });
 
+    // Log to Firestore
     await firestoreDb.collection("Alert_logs").add({
       type: "Manual",
       location,
@@ -118,17 +120,17 @@ app.post("/sendFloodAlertSMS", async (req, res) => {
       message,
     });
 
-    console.log(`✅ Manual SMS alert sent successfully for ${sensorName}`);
+    console.log(`✅ Manual alert sent successfully for ${sensorName}`);
     return res.json({ success: true, results });
-  } catch (error) {
-    console.error("❌ Error sending manual alert:", error.message);
-    return res.status(500).json({ error: "Failed to send SMS alert." });
+  } catch (err) {
+    console.error("❌ Manual alert error:", err.message);
+    return res.status(500).json({ error: "Failed to send manual alert." });
   }
 });
 
-// -------------------
-// Automatic Alert (Database Trigger Simulation)
-// -------------------
+/////////////////////////
+// AUTOMATIC ALERT
+/////////////////////////
 app.post("/autoFloodAlert", async (req, res) => {
   const { deviceName, distance } = req.body;
 
@@ -138,6 +140,7 @@ app.post("/autoFloodAlert", async (req, res) => {
 
   const roundedDistance = Math.round(distance);
   const status = getStatus(distance);
+
   if (status === "Normal") {
     console.log(`✅ Normal water level for ${deviceName}: ${roundedDistance} cm`);
     return res.json({ message: "Normal water level. No alert sent." });
@@ -167,7 +170,7 @@ app.post("/autoFloodAlert", async (req, res) => {
 
 - Sent by ${SENDER_NAME}`;
 
-    console.log("📨 Sending automatic SMS alert:\n", message);
+    console.log("📨 Sending automatic SMS alert:", message);
 
     const personnelSnap = await firestoreDb.collection("Authorized_personnel").get();
     await Promise.all(
@@ -181,6 +184,7 @@ app.post("/autoFloodAlert", async (req, res) => {
       })
     );
 
+    // Update Realtime Database
     await alertRef.set({
       alert_sent: true,
       auto_sent: true,
@@ -190,6 +194,7 @@ app.post("/autoFloodAlert", async (req, res) => {
       timestamp: Date.now(),
     });
 
+    // Log to Firestore
     await firestoreDb.collection("Alert_logs").add({
       type: "Automatic",
       location,
@@ -203,10 +208,10 @@ app.post("/autoFloodAlert", async (req, res) => {
     console.log(`✅ Automatic alert successfully sent for ${sensorName}`);
     return res.json({ success: true });
   } catch (err) {
-    console.error("❌ Auto alert failed:", err.message);
+    console.error("❌ Automatic alert failed:", err.message);
     return res.status(500).json({ error: "Failed to send automatic alert." });
   }
 });
 
-// Export as HTTP function
-exports.sendFloodAlertSMSApp = require("firebase-functions/v2/https").onRequest(app);
+// Export as Cloud Function (v2) using Express
+exports.sendFloodAlertSMSApp = onRequest(app);
