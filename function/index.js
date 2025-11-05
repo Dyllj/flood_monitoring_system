@@ -1,10 +1,8 @@
 // ================================
-// 🌊 FLOOD ALERT SYSTEM - v2 (CORRECTED)
+// 🌊 FLOOD ALERT SYSTEM - v2 (DEPLOYMENT TIMEOUT FIX)
 // ================================
-// This file fixes all known bugs:
-// 1. Uses v2 `secrets` instead of v1 `functions.config()`.
-// 2. Fixes Semaphore API call to use `x-www-form-urlencoded`.
-// 3. Fixes the "Silent Failure" bug and will now report errors to the UI.
+// FIX: `admin.initializeApp()` is now called inside a helper
+// to prevent deployment timeouts.
 // ================================
 
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
@@ -13,13 +11,29 @@ const admin = require("firebase-admin");
 const { FieldValue } = require("firebase-admin/firestore");
 const axios = require("axios");
 
-admin.initializeApp();
-const firestoreDb = admin.firestore();
-const rtdb = admin.database();
+// --- Lazy Admin Initialization ---
+let _adminApp;
+const getAdminApp = () => {
+  if (!_adminApp) {
+    _adminApp = admin.initializeApp();
+  }
+  return _adminApp;
+};
+
+const getFirestoreDb = () => {
+  getAdminApp();
+  return admin.firestore();
+};
+
+const getRtdb = () => {
+  getAdminApp();
+  return admin.database();
+};
+// --- End Lazy Init ---
 
 /**
- * 🛠️ FIX #1: sendSemaphoreSMS
- * - Now uses URLSearchParams to send `x-www-form-urlencoded` data.
+ * 🛠️ FIX: sendSemaphoreSMS
+ * - Uses URLSearchParams to send `x-www-form-urlencoded` data.
  * - Throws an error on failure instead of returning null.
  */
 async function sendSemaphoreSMS(apiKey, number, message, senderName) {
@@ -40,7 +54,7 @@ async function sendSemaphoreSMS(apiKey, number, message, senderName) {
       payload.toString(),
       {
         headers: {
-          "Content-Type": "application/x-www-form-urlencoded", // MANDATORY
+          "Content-Type": "application/x-www-form-urlencoded",
         },
       }
     );
@@ -67,9 +81,8 @@ function getStatus(distance) {
 }
 
 /**
- * 🛠️ FIX #2: sendFloodAlertSMS
- * - Uses v2 `secrets` to access environment variables.
- * - Checks if SMS sends actually succeeded before returning success.
+ * 🛠️ FIX: sendFloodAlertSMS
+ * - Uses v2 `secrets` and lazy initialization.
  */
 exports.sendFloodAlertSMS = onCall(
   {
@@ -80,6 +93,9 @@ exports.sendFloodAlertSMS = onCall(
     const apiKey = process.env.SEMAPHORE_API_KEY;
     const senderName = process.env.SENDER_NAME || "MolaveFlood";
 
+    const firestoreDb = getFirestoreDb();
+    const rtdb = getRtdb();
+
     if (!apiKey) {
       console.error("❌ SMS Alert failed: API Key is not configured in secrets.");
       throw new HttpsError("internal", "SMS provider not configured properly.");
@@ -88,7 +104,7 @@ exports.sendFloodAlertSMS = onCall(
     const { location: reqLocation, distance, sensorName: reqSensorName } = request.data;
 
     if (distance === undefined || !reqSensorName) {
-      throw new HttpsError("invalid-argument", "Missing required parameters: distance or sensorName.");
+      throw new HttpsError("invalid-argument", "Missing required parameters.");
     }
 
     let location = reqLocation;
@@ -175,6 +191,9 @@ exports.autoFloodAlert = onValueWritten(
     const apiKey = process.env.SEMAPHORE_API_KEY;
     const senderName = process.env.SENDER_NAME || "MolaveFlood";
 
+    const firestoreDb = getFirestoreDb();
+    const rtdb = getRtdb();
+
     if (!apiKey) {
       console.error("❌ Auto-Alert failed: API Key is not configured in secrets.");
       return;
@@ -260,7 +279,7 @@ exports.autoFloodAlert = onValueWritten(
         message,
       });
 
-      console.log(`✅ Automatic alert successfully sent for ${sensorName}`);
+      console.log(`✅ Automatic alert successfully sent for ${deviceName}`);
     } catch (err) {
       console.error("❌ Auto alert failed:", err.message);
     }
