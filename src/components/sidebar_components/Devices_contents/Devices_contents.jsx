@@ -45,7 +45,9 @@ const Devices_contents = ({ isAdmin }) => {
   const [showSmsAlert, setShowSmsAlert] = useState(false);
   const [showSmsAlertFailed, setShowSmsAlertFailed] = useState(false);
 
-  // Firestore listener
+  // ----------------------------
+  // Firestore listener (with device status)
+  // ----------------------------
   useEffect(() => {
     const unsub = onSnapshot(collection(db, "devices"), (snapshot) => {
       const updatedDevices = [];
@@ -53,11 +55,25 @@ const Devices_contents = ({ isAdmin }) => {
         updatedDevices.push({ id: doc.id, ...doc.data() })
       );
       setDevices(updatedDevices);
+
+      // 🔹 NEW FEATURE: Extract active/inactive status for dots
+      snapshot.forEach((doc) => {
+        const device = doc.data();
+        setSensorData((prev) => ({
+          ...prev,
+          [device.sensorName]: {
+            ...prev[device.sensorName],
+            status: device.status || "active", // default active
+          },
+        }));
+      });
     });
     return () => unsub();
   }, []);
 
-  // Realtime DB listener
+  // ----------------------------
+  // Realtime DB listener for distance readings
+  // ----------------------------
   useEffect(() => {
     const listeners = [];
     devices.forEach((device) => {
@@ -70,6 +86,7 @@ const Devices_contents = ({ isAdmin }) => {
             [device.sensorName]: {
               distance: data.distance,
               timestamp: data.timestamp,
+              status: prev[device.sensorName]?.status || "inactive", // preserve existing status
             },
           }));
 
@@ -143,16 +160,18 @@ const Devices_contents = ({ isAdmin }) => {
           const chartData = chartHistory[device.sensorName] || [];
           const percentage = Math.min((distance / maxHeight) * 100, 100);
 
-          // Determine dot status based on device status (default active)
-          const dotStatus = device.status || "active";
+          // 🔹 NEW FEATURE: Determine dot status based on Firestore status
+          const dotStatus = reading.status || "active";
 
           return (
             <div key={device.id} className="device-card shadow">
               <div className="device-header">
                 <h3>
-                  <span
-                    className={`status-dot ${dotStatus === "active" ? "active" : "inactive"}`}
-                  ></span>
+                <span
+                  className={`status-dot ${dotStatus === "active" ? "active" : "inactive"}`}
+                  data-status={dotStatus === "active" ? "Active" : "Inactive"}
+                ></span>
+                
                   {device.sensorName}
                 </h3>
                 <div className="device-actions">

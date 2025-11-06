@@ -854,14 +854,15 @@ body {
 .waterlevel-chart-container {
   animation: smoothFade 1s ease-in-out;
 }
+/* ====================== STATUS DOTS ====================== */
 .status-dot {
-  display: inline-block;
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  margin-right: 8px;
-  vertical-align: middle;
-  border: 1px solid #ccc;
+  display: inline-block;
+  position: relative;
+  margin-right: 6px;
+  cursor: default;
 }
 
 .status-dot.active {
@@ -870,4 +871,28 @@ body {
 
 .status-dot.inactive {
   background-color: #f44336; /* red */
+}
+
+/* Tooltip container */
+.status-dot::after {
+  content: attr(data-status); /* uses data-status attribute */
+  position: absolute;
+  bottom: 125%; /* show above the dot */
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #333;
+  color: #fff;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s;
+  z-index: 10;
+}
+
+/* Show tooltip on hover */
+.status-dot:hover::after {
+  opacity: 1;
 }
