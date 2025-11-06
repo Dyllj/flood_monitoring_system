@@ -99,11 +99,10 @@ exports.sendFloodAlertSMS = onCall(
       const roundedDistance = Math.round(distance);
       const status = getStatus(distance, deviceData);
 
-      const message = `FLOOD ALERT (MANUAL NOTICE)
-Location: ${location}
-Sensor: ${sensorName}
-Water Level: ${roundedDistance} cm
-Status: ${status}
+      const message = `MANUAL FLOOD ALERT
+Maayung Adlaw!
+Ang tubig sa ${location} naabot na ang lebel na ${roundedDistance}cm (${status}).
+Pag-alerto ug pag-andam sa posibleng baha.
 Time: ${new Date().toLocaleString("en-PH", { timeZone: "Asia/Manila" })}
 - Sent by Molave Municipal Risk Reduction and Management Office`;
 
@@ -154,7 +153,7 @@ Time: ${new Date().toLocaleString("en-PH", { timeZone: "Asia/Manila" })}
 );
 
 // ================================
-// Automatic Flood Alert (Dynamic thresholds + cooldown + daily limit)
+// Automatic Flood Alert (Dynamic thresholds + cooldown + daily limit + near-critical trigger)
 // ================================
 exports.autoFloodAlert = onValueWritten(
   { ref: "/realtime/{deviceName}", region: "asia-southeast1", secrets: ["SEMAPHORE_API_KEY", "SENDER_NAME"] },
@@ -187,11 +186,21 @@ exports.autoFloodAlert = onValueWritten(
         return null;
       }
 
-      const status = getStatus(distance, deviceData);
-      if (status === "Normal") {
-        console.log(`✅ Normal water level for ${deviceName}: ${roundedDistance} cm`);
+      // ------------------ Near-Critical Threshold Logic ------------------
+      const normalLevel = deviceData.normalLevel ?? 0;
+      const maxHeight = deviceData.maxHeight ?? 400;
+
+      // Calculate percentage of the water level in the sensor range
+      const levelPercentage = ((distance - normalLevel) / (maxHeight - normalLevel)) * 100;
+
+      // Only send alert if reading is above 60% of the range
+      if (levelPercentage < 60) {
+        console.log(`ℹ️ Water level for ${deviceName} is below 60% of range (${Math.round(levelPercentage)}%). Skipping SMS.`);
         return null;
       }
+      // ------------------------------------------------------------------
+
+      const status = getStatus(distance, deviceData);
 
       // ------------------ Cooldown & Daily Limit Logic ------------------
       const lastAutoSmsSent = deviceData.lastAutoSmsSent?.toMillis?.() || 0;
@@ -218,10 +227,9 @@ exports.autoFloodAlert = onValueWritten(
       const sensorName = deviceData.sensorName || deviceName;
 
       const message = `AUTOMATIC FLOOD ALERT
-Location: ${location}
-Sensor: ${sensorName}
-Water Level: ${roundedDistance} cm
-Status: ${status}
+Maayung Adlaw!
+Ang tubig sa ${location} naabot na ang lebel na ${roundedDistance}cm (${status}).
+Pag-alerto ug pag-andam sa posibleng baha.
 Time: ${new Date().toLocaleString("en-PH", { timeZone: "Asia/Manila" })}
 - Sent by Molave Municipal Risk Reduction and Management Office`;
 

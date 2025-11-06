@@ -275,7 +275,7 @@ const Devices_contents = ({ isAdmin }) => {
               </div>
 
               <div className="alert-row">
-                <strong>Alert Level:</strong> {alertLevel} cm
+                <strong>⚠️ Alert Level:</strong> {alertLevel} cm
               </div>
 
               {/* REALTIME CHART */}
