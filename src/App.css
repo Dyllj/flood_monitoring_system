@@ -92,6 +92,7 @@ header svg {
   width: 90%;
   max-width: 30rem;
   position: relative;
+  height: auto;
 }
 
 @media (max-width: 900px) {
