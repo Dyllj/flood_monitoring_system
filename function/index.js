@@ -1,8 +1,5 @@
 // ================================
-// 🌊 FLOOD ALERT SYSTEM - v2 (DEPLOYMENT TIMEOUT FIX)
-// ================================
-// FIX: `admin.initializeApp()` is now called inside a helper
-// to prevent deployment timeouts.
+// 🌊 FLOOD ALERT SYSTEM - v2 (FINAL SMS FIX + LOGGING)
 // ================================
 
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
@@ -32,9 +29,7 @@ const getRtdb = () => {
 // --- End Lazy Init ---
 
 /**
- * 🛠️ FIX: sendSemaphoreSMS
- * - Uses URLSearchParams to send `x-www-form-urlencoded` data.
- * - Throws an error on failure instead of returning null.
+ * Sends an SMS using the Semaphore API.
  */
 async function sendSemaphoreSMS(apiKey, number, message, senderName) {
   if (!apiKey) {
@@ -47,21 +42,17 @@ async function sendSemaphoreSMS(apiKey, number, message, senderName) {
     payload.append("apikey", apiKey);
     payload.append("number", number);
     payload.append("message", message);
-    payload.append("sendername", senderName);
+    if (senderName) payload.append("sendername", senderName);
 
     const response = await axios.post(
       "https://api.semaphore.co/api/v4/messages",
       payload.toString(),
-      {
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-      }
+      { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
     );
 
     if (response.status === 200 && response.data) {
       console.log(
-        `✅ SMS API Success for ${number}. Response ID: ${response.data[0]?.message_id}`
+        `✅ SMS API Success for ${number}. Response ID: ${response.data[0]?.message_id}. Check Semaphore logs.`
       );
       return response.data;
     } else {
@@ -69,7 +60,11 @@ async function sendSemaphoreSMS(apiKey, number, message, senderName) {
       throw new Error(`Semaphore API returned status ${response.status}`);
     }
   } catch (err) {
-    console.error(`❌ FAILED to send SMS to ${number}:`, err.response?.data || err.message);
+    console.error(
+      `❌ FAILED to send SMS to ${number}:`,
+      err.response?.data || err.message,
+      `Status: ${err.response?.status || 'N/A'}`
+    );
     throw err;
   }
 }
@@ -80,19 +75,14 @@ function getStatus(distance) {
   return "Normal";
 }
 
-/**
- * 🛠️ FIX: sendFloodAlertSMS
- * - Uses v2 `secrets` and lazy initialization.
- */
+// ================================
+// Manual Flood Alert Trigger via HTTPS call
+// ================================
 exports.sendFloodAlertSMS = onCall(
-  {
-    region: "asia-southeast1",
-    secrets: ["SEMAPHORE_API_KEY", "SENDER_NAME"],
-  },
+  { region: "asia-southeast1", secrets: ["SEMAPHORE_API_KEY", "SENDER_NAME"] },
   async (request) => {
     const apiKey = process.env.SEMAPHORE_API_KEY;
     const senderName = process.env.SENDER_NAME || "MolaveFlood";
-
     const firestoreDb = getFirestoreDb();
     const rtdb = getRtdb();
 
@@ -102,7 +92,6 @@ exports.sendFloodAlertSMS = onCall(
     }
 
     const { location: reqLocation, distance, sensorName: reqSensorName } = request.data;
-
     if (distance === undefined || !reqSensorName) {
       throw new HttpsError("invalid-argument", "Missing required parameters.");
     }
@@ -127,8 +116,7 @@ exports.sendFloodAlertSMS = onCall(
 📏 Water Level: ${roundedDistance} cm
 📊 Status: ${status}
 ⏰ Time: ${new Date().toLocaleString("en-PH", { timeZone: "Asia/Manila" })}
-
-- Sent by ${senderName}`;
+- Sent by Molave Municipal Risk Reduction and Management Office`;
 
       console.log("📨 Sending manual SMS alert:", message);
 
@@ -179,18 +167,13 @@ exports.sendFloodAlertSMS = onCall(
 );
 
 // ================================
-// AUTOMATIC ALERT (Also fixed)
+// Automatic Alert (RTDB Trigger)
 // ================================
 exports.autoFloodAlert = onValueWritten(
-  {
-    ref: "/realtime/{deviceName}",
-    region: "asia-southeast1",
-    secrets: ["SEMAPHORE_API_KEY", "SENDER_NAME"],
-  },
+  { ref: "/realtime/{deviceName}", region: "asia-southeast1", secrets: ["SEMAPHORE_API_KEY", "SENDER_NAME"] },
   async (event) => {
     const apiKey = process.env.SEMAPHORE_API_KEY;
     const senderName = process.env.SENDER_NAME || "MolaveFlood";
-
     const firestoreDb = getFirestoreDb();
     const rtdb = getRtdb();
 
@@ -201,7 +184,6 @@ exports.autoFloodAlert = onValueWritten(
 
     const deviceName = event.params.deviceName;
     const newData = event.data.after.val();
-
     if (!newData || newData.distance === undefined) return;
 
     const distance = newData.distance;
@@ -234,8 +216,7 @@ exports.autoFloodAlert = onValueWritten(
 📏 Water Level: ${roundedDistance} cm
 📊 Status: ${status}
 ⏰ Time: ${new Date().toLocaleString("en-PH", { timeZone: "Asia/Manila" })}
-
-- Sent by ${senderName}`;
+- Sent by Molave Municipal Risk Reduction and Management Office`;
 
       console.log("📨 Sending automatic SMS alert:", message);
 
