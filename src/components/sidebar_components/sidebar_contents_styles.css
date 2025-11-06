@@ -896,3 +896,15 @@ body {
 .status-dot:hover::after {
   opacity: 1;
 }
+/* Delete All Logs Icon next to search bar */
+.delete-all-icon {
+  cursor: pointer;
+  font-size: 1.5rem;
+  color: #ff4d4f; /* red */
+  margin-left: 8px;
+  transition: color 0.2s ease-in-out;
+}
+
+.delete-all-icon:hover {
+  color: #d9363e;
+}

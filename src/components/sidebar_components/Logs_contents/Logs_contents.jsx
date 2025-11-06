@@ -1,4 +1,5 @@
 import "./../sidebar_contents_styles.css";
+import "./Logs_contents_styles.css"; // ✅ External CSS for delete-all icon
 import { useState, useEffect } from "react";
 import { TbLogs, TbSearch, TbFilterCog } from "react-icons/tb";
 import { MdCreateNewFolder, MdDeleteOutline } from "react-icons/md";
@@ -13,7 +14,7 @@ import { handleGenerateReport } from "./Logs_contents_functions/handleGenerateRe
 import { handleReset } from "./Logs_contents_functions/handleReset";
 import { handleSave } from "./Logs_contents_functions/handleSave";
 import { handleCancel } from "./Logs_contents_functions/handleCancel";
-import { handleDeleteLog } from "./Logs_contents_functions/handleDeleteLog";
+import { handleDeleteLog, handleDeleteAllLogs } from "./Logs_contents_functions/handleDeleteLog";
 
 const Logs_contents = () => {
   const [showFilterModal, setShowFilterModal] = useState(false);
@@ -57,6 +58,12 @@ const Logs_contents = () => {
             onFocus={() => setIsSearchFocused(true)}
             onBlur={() => setIsSearchFocused(false)}
           />
+          {/* 🚨 Delete All Logs Icon */}
+          <MdDeleteOutline
+            className="delete-all-icon"
+            title="Delete all logs"
+            onClick={() => handleDeleteAllLogs(setLogs)}
+          />
         </div>
 
         {filteredLogs.length === 0 ? (
@@ -85,7 +92,8 @@ const Logs_contents = () => {
                   <td>{log.type}</td>
                   <td>
                     <button
-                      className="delete-btn" id="Delete-btn"
+                      className="delete-btn"
+                      id="Delete-btn"
                       onClick={() => handleDeleteLog(log.id, setLogs)}
                       title="Delete log"
                     >
