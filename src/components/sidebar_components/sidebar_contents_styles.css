@@ -284,9 +284,10 @@ body {
 }
 
 .progress-container {
+  position: relative;
   width: 100%;
-  height: 10px;
-  background: #e0e0e0;
+  height: 14px;
+  background: #ddd;
   border-radius: 10px;
   overflow: hidden;
 }
@@ -294,6 +295,22 @@ body {
 .progress-bar {
   height: 100%;
   transition: width 0.5s ease;
+}
+
+.progress-alert-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background-color: red; /* alert marker color */
+  opacity: 0.9;
+  pointer-events: none;
+  transition: background-color 0.3s ease;
+}
+
+/* 🔹 When exceeded, line turns white */
+.progress-alert-line.exceeded {
+  background-color: white;
 }
 
 .alert-row {

@@ -227,7 +227,7 @@ const Devices_contents = ({ isAdmin }) => {
                   <strong>Normal Level:</strong> {normalLevel} cm
                 </p>
                 <p>
-                  <strong>Alert Level:</strong> {alertLevel} cm
+                  
                 </p>
               </div>
 
@@ -243,11 +243,20 @@ const Devices_contents = ({ isAdmin }) => {
                     background: color,
                   }}
                 ></div>
+
+                {/* 🔹 Alert level indicator line */}
+                <div
+                  className={`progress-alert-line ${
+                    percentage >= (alertLevel / maxHeight) * 100 ? "exceeded" : ""
+                  }`}
+                  style={{
+                    left: `${(alertLevel / maxHeight) * 100}%`,
+                  }}
+                ></div>
               </div>
 
               <div className="alert-row">
-                <span>⚠ Alert Trigger</span>
-                <span>{alertLevel} cm</span>
+                <strong>Alert Level:</strong> {alertLevel} cm
               </div>
 
               {/* ===== REALTIME CHART ===== */}
