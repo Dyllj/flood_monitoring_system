@@ -45,7 +45,7 @@ const Devices_contents = ({ isAdmin }) => {
   const [showSmsAlert, setShowSmsAlert] = useState(false);
   const [showSmsAlertFailed, setShowSmsAlertFailed] = useState(false);
 
-  // 🔹 Firestore listener
+  // Firestore listener
   useEffect(() => {
     const unsub = onSnapshot(collection(db, "devices"), (snapshot) => {
       const updatedDevices = [];
@@ -57,7 +57,7 @@ const Devices_contents = ({ isAdmin }) => {
     return () => unsub();
   }, []);
 
-  // 🔹 Realtime DB listener
+  // Realtime DB listener
   useEffect(() => {
     const listeners = [];
     devices.forEach((device) => {
@@ -90,7 +90,6 @@ const Devices_contents = ({ isAdmin }) => {
     return () => listeners.forEach((unsub) => unsub());
   }, [devices]);
 
-  // Tooltip helper for sensor field
   const addSensorTooltip = () => {
     const parent = document.querySelector(".sensor-label");
     if (!parent) return;
@@ -130,7 +129,7 @@ const Devices_contents = ({ isAdmin }) => {
         )}
       </div>
 
-      {/* ====================== DEVICE CARDS ====================== */}
+      {/* DEVICE CARDS */}
       <div className="devices-grid">
         {devices.map((device) => {
           const reading = sensorData[device.sensorName] || {};
@@ -144,10 +143,18 @@ const Devices_contents = ({ isAdmin }) => {
           const chartData = chartHistory[device.sensorName] || [];
           const percentage = Math.min((distance / maxHeight) * 100, 100);
 
+          // Determine dot status based on device status (default active)
+          const dotStatus = device.status || "active";
+
           return (
             <div key={device.id} className="device-card shadow">
               <div className="device-header">
-                <h3>{device.sensorName}</h3>
+                <h3>
+                  <span
+                    className={`status-dot ${dotStatus === "active" ? "active" : "inactive"}`}
+                  ></span>
+                  {device.sensorName}
+                </h3>
                 <div className="device-actions">
                   <span
                     className="status-badge"
@@ -158,7 +165,6 @@ const Devices_contents = ({ isAdmin }) => {
 
                   {isAdmin && (
                     <>
-                      {/* 🔔 Send SMS Alert */}
                       <button
                         className="notify-btn"
                         onClick={async () => {
@@ -188,7 +194,6 @@ const Devices_contents = ({ isAdmin }) => {
                         <MdOutlineNotificationsActive />
                       </button>
 
-                      {/* ⚙ Edit */}
                       <button
                         className="edit-btn"
                         onClick={() =>
@@ -198,7 +203,6 @@ const Devices_contents = ({ isAdmin }) => {
                         <IoSettingsOutline />
                       </button>
 
-                      {/* 🗑 Delete */}
                       <button
                         className="delete-btn"
                         onClick={() => handleDelete(device.id)}
@@ -210,7 +214,7 @@ const Devices_contents = ({ isAdmin }) => {
                 </div>
               </div>
 
-              {/* ===== DEVICE INFO ===== */}
+              {/* DEVICE INFO */}
               <div className="device-meta">
                 <p>
                   <strong>Location:</strong> {device.location || "Unknown"}
@@ -225,9 +229,6 @@ const Devices_contents = ({ isAdmin }) => {
                 </p>
                 <p>
                   <strong>Normal Level:</strong> {normalLevel} cm
-                </p>
-                <p>
-                  
                 </p>
               </div>
 
@@ -244,7 +245,6 @@ const Devices_contents = ({ isAdmin }) => {
                   }}
                 ></div>
 
-                {/* 🔹 Alert level indicator line */}
                 <div
                   className={`progress-alert-line ${
                     percentage >= (alertLevel / maxHeight) * 100 ? "exceeded" : ""
@@ -259,12 +259,12 @@ const Devices_contents = ({ isAdmin }) => {
                 <strong>Alert Level:</strong> {alertLevel} cm
               </div>
 
-              {/* ===== REALTIME CHART ===== */}
+              {/* REALTIME CHART */}
               <div className="waterlevel-chart-container">
                 <ResponsiveContainer>
                   <AreaChart data={chartData}>
                     <XAxis dataKey="time" hide />
-                    <YAxis domain={[0, maxHeight]}/>
+                    <YAxis domain={[0, maxHeight]} />
                     <CartesianGrid stroke="rgba(16,16,16,0.2)" />
                     <defs>
                       <linearGradient
@@ -311,7 +311,7 @@ const Devices_contents = ({ isAdmin }) => {
         })}
       </div>
 
-      {/* ===== EDIT MODAL ===== */}
+      {/* EDIT MODAL */}
       {editingDevice && (
         <div className="modal-overlay" onClick={() => setEditingDevice(null)}>
           <div
@@ -409,7 +409,7 @@ const Devices_contents = ({ isAdmin }) => {
         </div>
       )}
 
-      {/* ===== ADD DEVICE MODAL ===== */}
+      {/* ADD DEVICE MODAL */}
       {showAddDevice && (
         <div className="modal-overlay" onClick={() => setShowAddDevice(false)}>
           <div className="modal-container" onClick={(e) => e.stopPropagation()}>

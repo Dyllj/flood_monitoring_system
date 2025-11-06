@@ -54,6 +54,8 @@ const AddDevice = ({ onClose }) => {
         maxHeight: parseInt(maxHeight, 10),
         alertLevel: parseInt(alertLevel, 10),
         normalLevel: parseInt(normalLevel, 10),
+        status: "active",
+        lastUpdate: serverTimestamp(),
         createdAt: serverTimestamp(),
       };
 
