@@ -239,7 +239,7 @@ Time: ${new Date().toLocaleString("en-PH", { timeZone: "Asia/Manila" })}
 // ================================
 // Scheduled function: Update device active/inactive status
 // ================================
-exports.updateDeviceStatus = onSchedule("every 5 minutes", async () => {
+exports.updateDeviceStatus = onSchedule("every 2 minutes", async () => {
   console.log("🕒 Running scheduled device status update...");
 
   try {
@@ -249,7 +249,7 @@ exports.updateDeviceStatus = onSchedule("every 5 minutes", async () => {
     if (devicesSnap.empty) return;
 
     const now = Date.now();
-    const inactivityThreshold = 5 * 60 * 1000;
+    const inactivityThreshold = 2 * 60 * 1000;
 
     const batch = firestoreDb.batch();
 
