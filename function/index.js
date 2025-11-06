@@ -110,12 +110,12 @@ exports.sendFloodAlertSMS = onCall(
       const status = getStatus(distance);
       const roundedDistance = Math.round(distance);
 
-      const message = `🚨 FLOOD ALERT (MANUAL NOTICE)
-📍 Location: ${location}
-🛰️ Sensor: ${sensorName}
-📏 Water Level: ${roundedDistance} cm
-📊 Status: ${status}
-⏰ Time: ${new Date().toLocaleString("en-PH", { timeZone: "Asia/Manila" })}
+      const message = ` FLOOD ALERT (MANUAL NOTICE)
+ Location: ${location}
+ Sensor: ${sensorName}
+ Water Level: ${roundedDistance} cm
+ Status: ${status}
+ Time: ${new Date().toLocaleString("en-PH", { timeZone: "Asia/Manila" })}
 - Sent by Molave Municipal Risk Reduction and Management Office`;
 
       console.log("📨 Sending manual SMS alert:", message);
@@ -210,12 +210,12 @@ exports.autoFloodAlert = onValueWritten(
       const location = deviceData.location || "Unknown";
       const sensorName = deviceData.sensorName || deviceName;
 
-      const message = `⚠️ AUTOMATIC FLOOD ALERT ⚠️
-📍 Location: ${location}
-🛰️ Sensor: ${sensorName}
-📏 Water Level: ${roundedDistance} cm
-📊 Status: ${status}
-⏰ Time: ${new Date().toLocaleString("en-PH", { timeZone: "Asia/Manila" })}
+      const message = ` AUTOMATIC FLOOD ALERT
+  Location: ${location}
+ Sensor: ${sensorName}
+ Water Level: ${roundedDistance} cm
+ Status: ${status}
+ Time: ${new Date().toLocaleString("en-PH", { timeZone: "Asia/Manila" })}
 - Sent by Molave Municipal Risk Reduction and Management Office`;
 
       console.log("📨 Sending automatic SMS alert:", message);
