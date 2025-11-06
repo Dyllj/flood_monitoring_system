@@ -1,5 +1,4 @@
 import "./../sidebar_contents_styles.css";
-import "./Logs_contents_styles.css"; // ✅ External CSS for delete-all icon
 import { useState, useEffect } from "react";
 import { TbLogs, TbSearch, TbFilterCog } from "react-icons/tb";
 import { MdCreateNewFolder, MdDeleteOutline } from "react-icons/md";
@@ -59,12 +58,13 @@ const Logs_contents = () => {
             onBlur={() => setIsSearchFocused(false)}
           />
           {/* 🚨 Delete All Logs Icon */}
-          <MdDeleteOutline
+
+        </div>
+            <MdDeleteOutline
             className="delete-all-icon"
             title="Delete all logs"
             onClick={() => handleDeleteAllLogs(setLogs)}
           />
-        </div>
 
         {filteredLogs.length === 0 ? (
           <p className="no-logs-msg">No logs available.</p>

@@ -896,15 +896,25 @@ body {
 .status-dot:hover::after {
   opacity: 1;
 }
-/* Delete All Logs Icon next to search bar */
+/* Container for search input + icons (make it relative) */
+.search-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+/* Delete All Logs Icon positioned to the far right */
 .delete-all-icon {
   cursor: pointer;
-  font-size: 1.5rem;
-  color: #ff4d4f; /* red */
-  margin-left: 8px;
-  transition: color 0.2s ease-in-out;
+  font-size: 2rem;
+  position: absolute;
+  left: 32.5rem; /* flush to the right of container */
+  margin-top: 0.3rem;
+  transition: color 0.2s ease-in-out, transform 0.2s ease-in-out;
 }
 
 .delete-all-icon:hover {
   color: #d9363e;
+  transform: scale(1.2);
 }
+
