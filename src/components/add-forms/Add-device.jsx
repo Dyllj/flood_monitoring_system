@@ -10,6 +10,9 @@ import AddDeviceFailed from "../custom-notification/for-add-device/add-device-fa
 const AddDevice = ({ onClose }) => {
   const [sensorName, setSensorName] = useState("");
   const [deviceLocation, setDeviceLocation] = useState("");
+  const [maxHeight, setMaxHeight] = useState("");
+  const [alertLevel, setAlertLevel] = useState("");
+  const [normalLevel, setNormalLevel] = useState("");
   const [loading, setLoading] = useState(false);
 
   // ✅ Notification states
@@ -20,10 +23,10 @@ const AddDevice = ({ onClose }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!sensorName || !deviceLocation) {
+    if (!sensorName || !deviceLocation || !maxHeight || !alertLevel || !normalLevel) {
       setFailedMsg({
         message: "Missing required fields",
-        subText: "Please fill in both Sensor Name and Location",
+        subText: "Please fill in all fields before submitting",
       });
       setShowFailed(true);
       return;
@@ -44,10 +47,13 @@ const AddDevice = ({ onClose }) => {
         return;
       }
 
-      // ✅ Create Firestore metadata
+      // ✅ Create Firestore metadata (integers only)
       const deviceData = {
-        sensorName: sensorName,
+        sensorName,
         location: deviceLocation,
+        maxHeight: parseInt(maxHeight, 10),
+        alertLevel: parseInt(alertLevel, 10),
+        normalLevel: parseInt(normalLevel, 10),
         createdAt: serverTimestamp(),
       };
 
@@ -117,6 +123,7 @@ const AddDevice = ({ onClose }) => {
               required
             />
           </label>
+
           <label>
             Device Location:
             <input
@@ -127,6 +134,48 @@ const AddDevice = ({ onClose }) => {
               required
             />
           </label>
+
+          <label>
+            Max Height (from sensor to riverbed):
+            <input
+              type="number"
+              value={maxHeight}
+              onChange={(e) => setMaxHeight(e.target.value)}
+              placeholder="Enter height in cm"
+              min="0"
+              step="1"
+              required
+            />
+          </label>
+          
+          <label>
+            Normal Water Level:
+            <input
+              type="number"
+              value={normalLevel}
+              onChange={(e) => setNormalLevel(e.target.value)}
+              placeholder="Enter normal level in cm"
+              min="0"
+              step="1"
+              required
+            />
+          </label>
+
+          <label>
+            Alert Trigger Level:
+            <input
+              type="number"
+              value={alertLevel}
+              onChange={(e) => setAlertLevel(e.target.value)}
+              placeholder="Enter alert level in cm"
+              min="0"
+              step="1"
+              required
+            />
+          </label>
+
+          {/* ✅ New Input Field */}
+
 
           <div className="devices-buttons">
             <button type="submit" id="add-device" disabled={loading}>

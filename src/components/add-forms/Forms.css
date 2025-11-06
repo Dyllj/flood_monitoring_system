@@ -41,10 +41,10 @@ input {
 
 .devices-buttons, .contacts-buttons {
     border-top: 1px solid #ccc;
-    padding-top: 3rem;
+    padding-top: 2.5rem;
     display: flex;
     justify-content: center;
-    margin-top: 4rem;
+    margin-top: 3rem;
     gap: 7rem;
 }
 
