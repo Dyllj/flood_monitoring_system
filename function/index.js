@@ -1,5 +1,5 @@
 // ================================
-// 🌊 FLOOD ALERT SYSTEM - v3 (Device Active/Inactive + Logging)
+// 🌊 FLOOD ALERT SYSTEM - v4 (Dynamic Thresholds + Device Status + Logging)
 // ================================
 
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
@@ -9,7 +9,9 @@ const admin = require("firebase-admin");
 const { FieldValue } = require("firebase-admin/firestore");
 const axios = require("axios");
 
-// --- Lazy Admin Initialization ---
+// --------------------
+// Lazy Admin Initialization
+// --------------------
 let _adminApp;
 const getAdminApp = () => {
   if (!_adminApp) {
@@ -27,12 +29,12 @@ const getRtdb = () => {
   getAdminApp();
   return admin.database();
 };
-// --- End Lazy Init ---
 
-// ---------------- SMS Helper ----------------
+// --------------------
+// Helper: Send SMS via Semaphore API
+// --------------------
 async function sendSemaphoreSMS(apiKey, number, message, senderName) {
   if (!apiKey) throw new Error("Semaphore API Key is missing.");
-
   try {
     const payload = new URLSearchParams();
     payload.append("apikey", apiKey);
@@ -54,14 +56,24 @@ async function sendSemaphoreSMS(apiKey, number, message, senderName) {
   }
 }
 
-function getStatus(distance) {
-  if (distance >= 400) return "Critical";
-  if (distance >= 200) return "Elevated";
+// --------------------
+// Helper: Determine flood status dynamically
+// --------------------
+function getStatus(distance, device = {}) {
+  const normalLevel = device.normalLevel ?? 0;   // default safe level
+  const alertLevel = device.alertLevel ?? 200;   // default alert threshold
+  const maxHeight = device.maxHeight ?? 400;     // default critical threshold
+
+  if (distance >= maxHeight) return "Critical";
+  if (distance >= alertLevel) return "Elevated";
+  if (distance <= normalLevel) return "Normal";
+
+  // Between normalLevel and alertLevel
   return "Normal";
 }
 
 // ================================
-// Manual Flood Alert
+// Manual Flood Alert Function
 // ================================
 exports.sendFloodAlertSMS = onCall(
   { region: "asia-southeast1", secrets: ["SEMAPHORE_API_KEY", "SENDER_NAME"] },
@@ -74,19 +86,18 @@ exports.sendFloodAlertSMS = onCall(
     const { location: reqLocation, distance, sensorName: reqSensorName } = request.data;
     if (distance === undefined || !reqSensorName) throw new HttpsError("invalid-argument", "Missing parameters.");
 
-    let location = reqLocation;
-    let sensorName = reqSensorName;
-
     try {
+      let location = reqLocation;
+      let sensorName = reqSensorName;
+
+      // Fetch device thresholds from Firestore
       const deviceDoc = await firestoreDb.collection("devices").doc(sensorName).get();
-      if (deviceDoc.exists) {
-        const data = deviceDoc.data();
-        location = location || data.location || "Unknown";
-        sensorName = data.sensorName || sensorName;
-      }
+      const deviceData = deviceDoc.exists ? deviceDoc.data() : {};
+      location = location || deviceData.location || "Unknown";
+      sensorName = deviceData.sensorName || sensorName;
 
       const roundedDistance = Math.round(distance);
-      const status = getStatus(distance);
+      const status = getStatus(distance, deviceData);
 
       const message = `FLOOD ALERT (MANUAL NOTICE)
 Location: ${location}
@@ -96,6 +107,7 @@ Status: ${status}
 Time: ${new Date().toLocaleString("en-PH", { timeZone: "Asia/Manila" })}
 - Sent by Molave Municipal Risk Reduction and Management Office`;
 
+      // Fetch authorized personnel
       const personnelSnap = await firestoreDb.collection("Authorized_personnel").get();
       if (personnelSnap.empty) throw new HttpsError("not-found", "No authorized personnel found.");
 
@@ -111,6 +123,7 @@ Time: ${new Date().toLocaleString("en-PH", { timeZone: "Asia/Manila" })}
         })
       );
 
+      // Log alert in RTDB
       await rtdb.ref(`alerts/${sensorName}`).set({
         alert_sent: true,
         auto_sent: false,
@@ -120,6 +133,7 @@ Time: ${new Date().toLocaleString("en-PH", { timeZone: "Asia/Manila" })}
         timestamp: Date.now(),
       });
 
+      // Log alert in Firestore
       await firestoreDb.collection("Alert_logs").add({
         type: "Manual",
         location,
@@ -140,7 +154,7 @@ Time: ${new Date().toLocaleString("en-PH", { timeZone: "Asia/Manila" })}
 );
 
 // ================================
-// Automatic Flood Alert
+// Automatic Flood Alert (Dynamic thresholds + cooldown + daily limit)
 // ================================
 exports.autoFloodAlert = onValueWritten(
   { ref: "/realtime/{deviceName}", region: "asia-southeast1", secrets: ["SEMAPHORE_API_KEY", "SENDER_NAME"] },
@@ -156,28 +170,49 @@ exports.autoFloodAlert = onValueWritten(
 
     const distance = newData.distance;
     const roundedDistance = Math.round(distance);
-    const status = getStatus(distance);
 
     try {
       const deviceDoc = await firestoreDb.collection("devices").doc(deviceName).get();
       const deviceData = deviceDoc.exists ? deviceDoc.data() : {};
-      
-      // 🔹 Update lastUpdate timestamp whenever new reading is received
+
+      // Mark device active and update last reading timestamp
       await firestoreDb.collection("devices").doc(deviceName).update({
         lastUpdate: FieldValue.serverTimestamp(),
-        status: "active", // mark device active on new reading
+        status: "active",
       });
 
-      // 🔹 Skip if device is inactive
+      // Skip if device is inactive
       if (deviceData.status === "inactive") {
         console.log(`ℹ️ Device ${deviceName} is inactive. Skipping automatic SMS.`);
         return null;
       }
 
+      const status = getStatus(distance, deviceData);
       if (status === "Normal") {
         console.log(`✅ Normal water level for ${deviceName}: ${roundedDistance} cm`);
         return null;
       }
+
+      // ------------------ Cooldown & Daily Limit Logic ------------------
+      const lastAutoSmsSent = deviceData.lastAutoSmsSent?.toMillis?.() || 0;
+      const autoSmsCountToday = deviceData.autoSmsCountToday || 0;
+      const autoSmsCountDate = deviceData.autoSmsCountDate || "";
+
+      const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Manila" });
+      let currentCount = autoSmsCountToday;
+      if (autoSmsCountDate !== today) currentCount = 0;
+
+      const cooldown = 5 * 60 * 60 * 1000; // 5 hours in ms
+      if (Date.now() - lastAutoSmsSent < cooldown) {
+        console.log(`ℹ️ Skipping SMS for ${deviceName}: cooldown not reached.`);
+        return null;
+      }
+
+      if (currentCount >= 3) {
+        console.log(`ℹ️ Skipping SMS for ${deviceName}: daily limit reached.`);
+        return null;
+      }
+      // ------------------------------------------------------------------
 
       const location = deviceData.location || "Unknown";
       const sensorName = deviceData.sensorName || deviceName;
@@ -193,6 +228,7 @@ Time: ${new Date().toLocaleString("en-PH", { timeZone: "Asia/Manila" })}
       const personnelSnap = await firestoreDb.collection("Authorized_personnel").get();
       if (personnelSnap.empty) return;
 
+      // Send SMS to all personnel
       await Promise.all(
         personnelSnap.docs.map(async (doc) => {
           const person = doc.data();
@@ -208,6 +244,7 @@ Time: ${new Date().toLocaleString("en-PH", { timeZone: "Asia/Manila" })}
         })
       );
 
+      // Update RTDB and Firestore logs
       await rtdb.ref(`alerts/${deviceName}`).set({
         alert_sent: true,
         auto_sent: true,
@@ -227,6 +264,13 @@ Time: ${new Date().toLocaleString("en-PH", { timeZone: "Asia/Manila" })}
         message,
       });
 
+      // Update last sent timestamp and daily count
+      await firestoreDb.collection("devices").doc(deviceName).update({
+        lastAutoSmsSent: FieldValue.serverTimestamp(),
+        autoSmsCountToday: currentCount + 1,
+        autoSmsCountDate: today,
+      });
+
       console.log(`✅ Automatic alert sent for ${deviceName}`);
     } catch (err) {
       console.error("❌ Auto alert failed:", err.message);
@@ -237,7 +281,8 @@ Time: ${new Date().toLocaleString("en-PH", { timeZone: "Asia/Manila" })}
 );
 
 // ================================
-// Scheduled function: Update device active/inactive status
+// Scheduled Function: Update Device Active/Inactive Status
+// Runs every 2 minutes
 // ================================
 exports.updateDeviceStatus = onSchedule("every 2 minutes", async () => {
   console.log("🕒 Running scheduled device status update...");
@@ -245,17 +290,15 @@ exports.updateDeviceStatus = onSchedule("every 2 minutes", async () => {
   try {
     const firestoreDb = getFirestoreDb();
     const devicesSnap = await firestoreDb.collection("devices").get();
-
     if (devicesSnap.empty) return;
 
     const now = Date.now();
-    const inactivityThreshold = 2 * 60 * 1000;
+    const inactivityThreshold = 2 * 60 * 1000; // 2 minutes in ms
 
     const batch = firestoreDb.batch();
-
     devicesSnap.docs.forEach((docSnap) => {
       const device = docSnap.data();
-      const lastUpdate = device.lastUpdate?.toMillis ? device.lastUpdate.toMillis() : 0;
+      const lastUpdate = device.lastUpdate?.toMillis?.() || 0;
       const newStatus = now - lastUpdate > inactivityThreshold ? "inactive" : "active";
 
       if (device.status !== newStatus) {
