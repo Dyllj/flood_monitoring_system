@@ -45,9 +45,7 @@ const Devices_contents = ({ isAdmin }) => {
   const [showSmsAlert, setShowSmsAlert] = useState(false);
   const [showSmsAlertFailed, setShowSmsAlertFailed] = useState(false);
 
-  // ----------------------------
-  // Firestore listener (with device status)
-  // ----------------------------
+  // 🔹 Firestore listener
   useEffect(() => {
     const unsub = onSnapshot(collection(db, "devices"), (snapshot) => {
       const updatedDevices = [];
@@ -56,14 +54,14 @@ const Devices_contents = ({ isAdmin }) => {
       );
       setDevices(updatedDevices);
 
-      // 🔹 NEW FEATURE: Extract active/inactive status for dots
+      // Maintain sensor status
       snapshot.forEach((doc) => {
         const device = doc.data();
         setSensorData((prev) => ({
           ...prev,
           [device.sensorName]: {
             ...prev[device.sensorName],
-            status: device.status || "active", // default active
+            status: device.status || "active",
           },
         }));
       });
@@ -71,9 +69,7 @@ const Devices_contents = ({ isAdmin }) => {
     return () => unsub();
   }, []);
 
-  // ----------------------------
-  // Realtime DB listener for distance readings
-  // ----------------------------
+  // 🔹 Realtime DB listener for sensor data
   useEffect(() => {
     const listeners = [];
     devices.forEach((device) => {
@@ -81,20 +77,24 @@ const Devices_contents = ({ isAdmin }) => {
       const unsubscribe = onValue(sensorRef, (snapshot) => {
         const data = snapshot.val();
         if (data) {
+          // Convert from cm → m
+          const distanceMeters = (data.distance || 0) / 100;
+
           setSensorData((prev) => ({
             ...prev,
             [device.sensorName]: {
-              distance: data.distance,
+              distance: distanceMeters, // store in meters
               timestamp: data.timestamp,
-              status: prev[device.sensorName]?.status || "inactive", // preserve existing status
+              status: prev[device.sensorName]?.status || "inactive",
             },
           }));
 
+          // Update chart history (in meters)
           setChartHistory((prev) => {
             const prevData = prev[device.sensorName] || [];
             const newPoint = {
               time: new Date().toLocaleTimeString(),
-              value: Math.floor(data.distance),
+              value: parseFloat(distanceMeters.toFixed(2)),
             };
             const updated = [...prevData, newPoint];
             if (updated.length > 30) updated.shift();
@@ -150,28 +150,28 @@ const Devices_contents = ({ isAdmin }) => {
       <div className="devices-grid">
         {devices.map((device) => {
           const reading = sensorData[device.sensorName] || {};
-          const distance = Math.floor(reading.distance || 0);
-          const maxHeight = parseInt(device.maxHeight || 600, 10);
-          const normalLevel = parseInt(device.normalLevel || 200, 10);
-          const alertLevel = parseInt(device.alertLevel || 400, 10);
+          const distance = parseFloat(reading.distance || 0); // in meters
+          const maxHeight = parseFloat(device.maxHeight || 6.0); // in meters
+          const normalLevel = parseFloat(device.normalLevel || 2.0);
+          const alertLevel = parseFloat(device.alertLevel || 4.0);
 
           const status = getStatus(distance, normalLevel, alertLevel);
           const color = getColor(distance, normalLevel, alertLevel);
           const chartData = chartHistory[device.sensorName] || [];
-          const percentage = Math.min((distance / maxHeight) * 100, 100);
 
-          // 🔹 NEW FEATURE: Determine dot status based on Firestore status
+          const percentage = Math.min((distance / maxHeight) * 100, 100);
           const dotStatus = reading.status || "active";
 
           return (
             <div key={device.id} className="device-card shadow">
               <div className="device-header">
                 <h3>
-                <span
-                  className={`status-dot ${dotStatus === "active" ? "active" : "inactive"}`}
-                  data-status={dotStatus === "active" ? "Active" : "Inactive"}
-                ></span>
-                
+                  <span
+                    className={`status-dot ${
+                      dotStatus === "active" ? "active" : "inactive"
+                    }`}
+                    data-status={dotStatus === "active" ? "Active" : "Inactive"}
+                  ></span>
                   {device.sensorName}
                 </h3>
                 <div className="device-actions">
@@ -244,15 +244,16 @@ const Devices_contents = ({ isAdmin }) => {
                   </p>
                 )}
                 <p>
-                  <strong>Max Height:</strong> {maxHeight} cm
+                  <strong>Max Height:</strong> {maxHeight.toFixed(2)} m
                 </p>
                 <p>
-                  <strong>Normal Level:</strong> {normalLevel} cm
+                  <strong>Normal Level:</strong> {normalLevel.toFixed(2)} m
                 </p>
               </div>
 
               <p className="level-text">
-                Current Level: <b>{distance} cm</b> / {maxHeight} cm
+                Current Level: <b>{distance.toFixed(2)} m</b> /{" "}
+                {maxHeight.toFixed(2)} m
               </p>
 
               <div className="progress-container">
@@ -266,7 +267,9 @@ const Devices_contents = ({ isAdmin }) => {
 
                 <div
                   className={`progress-alert-line ${
-                    percentage >= (alertLevel / maxHeight) * 100 ? "exceeded" : ""
+                    percentage >= (alertLevel / maxHeight) * 100
+                      ? "exceeded"
+                      : ""
                   }`}
                   style={{
                     left: `${(alertLevel / maxHeight) * 100}%`,
@@ -275,7 +278,7 @@ const Devices_contents = ({ isAdmin }) => {
               </div>
 
               <div className="alert-row">
-                <strong>⚠️ Alert Level:</strong> {alertLevel} cm
+                <strong>Alert Level:</strong> {alertLevel.toFixed(2)} m
               </div>
 
               {/* REALTIME CHART */}
@@ -293,22 +296,8 @@ const Devices_contents = ({ isAdmin }) => {
                         x2="0"
                         y2="1"
                       >
-                        <stop offset="0%" stopColor={color} stopOpacity={0.6}>
-                          <animate
-                            attributeName="stopColor"
-                            values={`${color};${color}`}
-                            dur="1.2s"
-                            fill="freeze"
-                          />
-                        </stop>
-                        <stop offset="100%" stopColor={color} stopOpacity={0.1}>
-                          <animate
-                            attributeName="stopColor"
-                            values={`${color};${color}`}
-                            dur="1.2s"
-                            fill="freeze"
-                          />
-                        </stop>
+                        <stop offset="0%" stopColor={color} stopOpacity={0.6} />
+                        <stop offset="100%" stopColor={color} stopOpacity={0.1} />
                       </linearGradient>
                     </defs>
 
@@ -320,7 +309,6 @@ const Devices_contents = ({ isAdmin }) => {
                       strokeWidth={2}
                       dot={false}
                       isAnimationActive={true}
-                      className="waterlevel-area"
                     />
                   </AreaChart>
                 </ResponsiveContainer>
@@ -333,10 +321,7 @@ const Devices_contents = ({ isAdmin }) => {
       {/* EDIT MODAL */}
       {editingDevice && (
         <div className="modal-overlay" onClick={() => setEditingDevice(null)}>
-          <div
-            className="modal-container"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div className="modal-container" onClick={(e) => e.stopPropagation()}>
             <h2>Edit Device Metadata</h2>
             <form
               onSubmit={(e) =>
@@ -379,7 +364,7 @@ const Devices_contents = ({ isAdmin }) => {
               </label>
 
               <label>
-                Max Height (cm):
+                Max Height (m):
                 <input
                   type="number"
                   value={editData.maxHeight}
@@ -390,7 +375,7 @@ const Devices_contents = ({ isAdmin }) => {
               </label>
 
               <label>
-                Normal Level (cm):
+                Normal Level (m):
                 <input
                   type="number"
                   value={editData.normalLevel}
@@ -401,7 +386,7 @@ const Devices_contents = ({ isAdmin }) => {
               </label>
 
               <label>
-                Alert Level Trigger (cm):
+                Alert Level (m):
                 <input
                   type="number"
                   value={editData.alertLevel}

@@ -47,13 +47,14 @@ const AddDevice = ({ onClose }) => {
         return;
       }
 
-      // ✅ Create Firestore metadata (integers only)
+      // ✅ Store directly in meters (no conversion)
       const deviceData = {
         sensorName,
         location: deviceLocation,
-        maxHeight: parseInt(maxHeight, 10),
-        alertLevel: parseInt(alertLevel, 10),
-        normalLevel: parseInt(normalLevel, 10),
+        maxHeight: parseFloat(maxHeight),  // stored in meters
+        alertLevel: parseFloat(alertLevel), // stored in meters
+        normalLevel: parseFloat(normalLevel), // stored in meters
+        unit: "m", // 🔹 optional: helps you identify that these are in meters
         status: "active",
         lastUpdate: serverTimestamp(),
         createdAt: serverTimestamp(),
@@ -121,7 +122,7 @@ const AddDevice = ({ onClose }) => {
               type="text"
               value={sensorName}
               onChange={(e) => setSensorName(e.target.value)}
-              placeholder="Must match DB key (e.g. sensor01)"
+              placeholder='Must match DB key (e.g. "sensor01")'
               required
             />
           </label>
@@ -138,46 +139,43 @@ const AddDevice = ({ onClose }) => {
           </label>
 
           <label>
-            Max Height (from sensor to riverbed):
+            Max Height (m):
             <input
               type="number"
               value={maxHeight}
               onChange={(e) => setMaxHeight(e.target.value)}
-              placeholder="Enter height in cm"
+              placeholder="Enter height in meters"
               min="0"
-              step="1"
+              step="0.01"
               required
             />
           </label>
-          
+
           <label>
-            Normal Water Level:
+            Normal Water Level (m):
             <input
               type="number"
               value={normalLevel}
               onChange={(e) => setNormalLevel(e.target.value)}
-              placeholder="Enter normal level in cm"
+              placeholder="Enter normal level in meters"
               min="0"
-              step="1"
+              step="0.01"
               required
             />
           </label>
 
           <label>
-            Alert Trigger Level:
+            Alert Trigger Level (m):
             <input
               type="number"
               value={alertLevel}
               onChange={(e) => setAlertLevel(e.target.value)}
-              placeholder="Enter alert level in cm"
+              placeholder="Enter alert level in meters"
               min="0"
-              step="1"
+              step="0.01"
               required
             />
           </label>
-
-          {/* ✅ New Input Field */}
-
 
           <div className="devices-buttons">
             <button type="submit" id="add-device" disabled={loading}>
