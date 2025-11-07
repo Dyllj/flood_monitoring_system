@@ -78,7 +78,7 @@ const Devices_contents = ({ isAdmin }) => {
         const data = snapshot.val();
         if (data) {
           // Convert from cm → m
-          const distanceMeters = (data.distance || 0) / 100;
+          const distanceMeters = (data.distance || 0);
 
           setSensorData((prev) => ({
             ...prev,
