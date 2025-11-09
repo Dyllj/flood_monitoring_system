@@ -51,48 +51,51 @@ ${timeframe}
 // ================================
 // ☎️ Manual SMS Alert Function
 // ================================
-exports.sendFloodAlertSMS = onCall(async (request) => {
-  const { sensorName } = request.data || {};
-  if (!sensorName) throw new HttpsError("invalid-argument", "Missing sensorName");
+exports.sendFloodAlertSMS = onCall(
+  { cors: true },  // <-- Add this to enable CORS
+  async (request) => {
+    const { sensorName } = request.data || {};
+    if (!sensorName) throw new HttpsError("invalid-argument", "Missing sensorName");
 
-  const firestoreDb = getFirestoreDb();
-  const rtdb = getRtdb();
+    const firestoreDb = getFirestoreDb();
+    const rtdb = getRtdb();
 
-  try {
-    const deviceRef = firestoreDb.collection("devices").doc(sensorName);
-    const deviceSnap = await deviceRef.get();
-    if (!deviceSnap.exists) throw new HttpsError("not-found", `Device "${sensorName}" not found.`);
+    try {
+      const deviceRef = firestoreDb.collection("devices").doc(sensorName);
+      const deviceSnap = await deviceRef.get();
+      if (!deviceSnap.exists) throw new HttpsError("not-found", `Device "${sensorName}" not found.`);
 
-    const device = deviceSnap.data();
-    const location = device.location || "Unknown Location";
-    const waterLevelStatus = device.waterLevelStatus || "Normal";
+      const device = deviceSnap.data();
+      const location = device.location || "Unknown Location";
+      const waterLevelStatus = device.waterLevelStatus || "Normal";
 
-    const rtdbRef = rtdb.ref(`realtime/${sensorName}`);
-    const rtdbSnap = await rtdbRef.get();
-    const distance = parseFloat(rtdbSnap.val()?.distance || 0);
+      const rtdbRef = rtdb.ref(`realtime/${sensorName}`);
+      const rtdbSnap = await rtdbRef.get();
+      const distance = parseFloat(rtdbSnap.val()?.distance || 0);
 
-    const personnelSnap = await firestoreDb.collection("Authorized_personnel").get();
-    if (personnelSnap.empty) throw new HttpsError("not-found", "No authorized personnel found.");
+      const personnelSnap = await firestoreDb.collection("Authorized_personnel").get();
+      if (personnelSnap.empty) throw new HttpsError("not-found", "No authorized personnel found.");
 
-    const recipients = personnelSnap.docs.map((doc) => doc.data().Phone_number);
-    const message = buildFloodMessage(location, distance, waterLevelStatus);
+      const recipients = personnelSnap.docs.map((doc) => doc.data().Phone_number);
+      const message = buildFloodMessage(location, distance, waterLevelStatus);
 
-    for (const number of recipients) {
-      await axios.post("https://api.semaphore.co/api/v4/messages", null, {
-        params: {
-          apikey: SEMAPHORE_API_KEY,
-          number,
-          message,
-          sendername: SENDER_NAME,
-        },
-      });
+      for (const number of recipients) {
+        await axios.post("https://api.semaphore.co/api/v4/messages", null, {
+          params: {
+            apikey: SEMAPHORE_API_KEY,
+            number,
+            message,
+            sendername: SENDER_NAME,
+          },
+        });
+      }
+
+      return { success: true, message: "SMS Alert sent successfully!" };
+    } catch (error) {
+      throw new HttpsError("internal", error.message);
     }
-
-    return { success: true, message: "SMS Alert sent successfully!" };
-  } catch (error) {
-    throw new HttpsError("internal", error.message);
   }
-});
+);
 
 // ================================
 // 🔔 Automatic SMS Alert Function (3x/day, 5h cooldown)
