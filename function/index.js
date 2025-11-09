@@ -1,5 +1,5 @@
 // ================================
-// 🌊 FLOOD ALERT SYSTEM - v6 (Semaphore SMS Only, Cleaned)
+// 🌊 FLOOD ALERT SYSTEM - v6 (Semaphore SMS Only, Cleaned & Number Formatting Fixed)
 // ================================
 
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
@@ -29,13 +29,7 @@ const getRtdb = () => {
 // ---------------- Semaphore Config ----------------
 const SEMAPHORE_API_KEY = process.env.SEMAPHORE_API_KEY || "";
 const SENDER_NAME = process.env.SENDER_NAME || "MolaveFlood";
-
-// ---------------- Flood Status Helper ----------------
-function getStatus(distance, normalLevel, alertLevel) {
-  if (distance >= alertLevel) return "Critical";
-  if (distance >= normalLevel) return "Elevated";
-  return "Normal";
-}
+const SEMAPHORE_API_URL = "https://api.semaphore.co/api/v4/messages";
 
 // ---------------- Shared Message Builder ----------------
 function buildFloodMessage(location, distance, waterLevelStatus) {
@@ -48,11 +42,26 @@ ${timeframe}
 - Molave Municipal Disaster Risk Reduction Management Office`;
 }
 
+// ---------------- Shared Phone Number Formatter ----------------
+function formatNumber(number) {
+  if (!number || typeof number !== "string") return null;
+
+  let cleanNumber = number.replace(/[^0-9]/g, "");
+
+  if (cleanNumber.startsWith("09") && cleanNumber.length === 11) {
+    return "63" + cleanNumber.substring(1);
+  } else if (cleanNumber.startsWith("639") && cleanNumber.length === 12) {
+    return cleanNumber;
+  }
+
+  return null;
+}
+
 // ================================
-// ☎️ Manual SMS Alert Function (FIXED: CORS Enabled, Region Set, Secrets Bound)
+// ☎️ Manual SMS Alert Function
 // ================================
 exports.sendFloodAlertSMS = onCall(
-  { cors: true, region: "asia-southeast1", secrets: ["SEMAPHORE_API_KEY", "SENDER_NAME"] },  // CORS, region, and secrets bound
+  { cors: true, region: "asia-southeast1", secrets: ["SEMAPHORE_API_KEY", "SENDER_NAME"] },
   async (request) => {
     const { sensorName } = request.data || {};
     if (!sensorName) throw new HttpsError("invalid-argument", "Missing sensorName");
@@ -61,6 +70,7 @@ exports.sendFloodAlertSMS = onCall(
     const rtdb = getRtdb();
 
     try {
+      // --- 1. Fetch Device Data ---
       const deviceRef = firestoreDb.collection("devices").doc(sensorName);
       const deviceSnap = await deviceRef.get();
       if (!deviceSnap.exists) throw new HttpsError("not-found", `Device "${sensorName}" not found.`);
@@ -69,49 +79,49 @@ exports.sendFloodAlertSMS = onCall(
       const location = device.location || "Unknown Location";
       const waterLevelStatus = device.waterLevelStatus || "Normal";
 
+      // --- 2. Get Current Reading ---
       const rtdbRef = rtdb.ref(`realtime/${sensorName}`);
       const rtdbSnap = await rtdbRef.get();
       const distance = parseFloat(rtdbSnap.val()?.distance || 0);
 
+      // --- 3. Fetch & Format Personnel Numbers ---
       const personnelSnap = await firestoreDb.collection("Authorized_personnel").get();
       if (personnelSnap.empty) throw new HttpsError("not-found", "No authorized personnel found.");
 
-      // IMPROVED: Filter for valid Philippine phone numbers (starts with "09")
       const recipients = personnelSnap.docs
-        .map((doc) => doc.data().Phone_number)
-        .filter((number) => number && typeof number === "string" && number.startsWith("09"));
-      if (recipients.length === 0) throw new HttpsError("not-found", "No valid phone numbers found.");
+        .map((doc) => formatNumber(doc.data().Phone_number))
+        .filter(Boolean);
 
+      if (recipients.length === 0) throw new HttpsError("not-found", "No valid phone numbers found after formatting.");
+
+      const recipientsString = recipients.join(",");
       const message = buildFloodMessage(location, distance, waterLevelStatus);
 
-      for (const number of recipients) {
-        await axios.post("https://api.semaphore.co/api/v4/messages", null, {
-          params: {
-            apikey: SEMAPHORE_API_KEY,
-            number,
-            message,
-            sendername: SENDER_NAME,
-          },
-        });
-      }
+      // --- 4. Send SMS via Semaphore ---
+      await axios.post(SEMAPHORE_API_URL, null, {
+        params: {
+          apikey: SEMAPHORE_API_KEY,
+          number: recipientsString,
+          message,
+          sendername: SENDER_NAME,
+        },
+      });
 
       return { success: true, message: "SMS Alert sent successfully!" };
     } catch (error) {
+      console.error("sendFloodAlertSMS failed:", error.message);
       throw new HttpsError("internal", error.message);
     }
   }
 );
 
 // ================================
-// 🔔 Automatic SMS Alert Function (3x/day, 5h cooldown, Region Set, Secrets Bound, Force Redeploy)
+// 🔔 Automatic SMS Alert Function
 // ================================
 exports.autoFloodAlertSMS = onSchedule(
   "every 10 minutes",
-  { timeZone: "Asia/Manila", region: "asia-southeast1", secrets: ["SEMAPHORE_API_KEY", "SENDER_NAME"] },  // Region and secrets bound
+  { timeZone: "Asia/Manila", region: "asia-southeast1", secrets: ["SEMAPHORE_API_KEY", "SENDER_NAME"] },
   async () => {
-    // Force redeploy to asia-southeast1 (dummy change to trigger update)
-    console.log("Region update for asia-southeast1");
-
     const firestoreDb = getFirestoreDb();
     const rtdb = getRtdb();
     const now = Date.now();
@@ -123,7 +133,7 @@ exports.autoFloodAlertSMS = onSchedule(
 
       for (const docSnap of devicesSnap.docs) {
         const device = docSnap.data();
-        const sensorName = device.sensorName;
+        const sensorName = docSnap.id;
         const alertLevel = parseFloat(device.alertLevel || 0);
         const status = device.status || "inactive";
 
@@ -136,9 +146,7 @@ exports.autoFloodAlertSMS = onSchedule(
 
         const metaRef = firestoreDb.collection("autoSMSMeta").doc(sensorName);
         const metaSnap = await metaRef.get();
-        let meta = metaSnap.exists
-          ? metaSnap.data()
-          : { count: 0, lastSent: 0, day: new Date().getDate() };
+        let meta = metaSnap.exists ? metaSnap.data() : { count: 0, lastSent: 0, day: new Date().getDate() };
 
         const today = new Date().getDate();
         if (meta.day !== today) {
@@ -151,30 +159,34 @@ exports.autoFloodAlertSMS = onSchedule(
 
         const personnelSnap = await firestoreDb.collection("Authorized_personnel").get();
         if (personnelSnap.empty) continue;
-        const recipients = personnelSnap.docs.map((d) => d.data().Phone_number);
 
+        const recipients = personnelSnap.docs
+          .map((d) => formatNumber(d.data().Phone_number))
+          .filter(Boolean);
+
+        if (recipients.length === 0) continue;
+
+        const recipientsString = recipients.join(",");
         const message = buildFloodMessage(device.location, distance, device.waterLevelStatus || "Critical");
 
-        for (const number of recipients) {
-          try {
-            await axios.post("https://api.semaphore.co/api/v4/messages", null, {
-              params: {
-                apikey: SEMAPHORE_API_KEY,
-                number,
-                message,
-                sendername: SENDER_NAME,
-              },
-            });
-          } catch (err) {
-            console.error(`Failed to send SMS to ${number}:`, err.message);
-          }
+        try {
+          await axios.post(SEMAPHORE_API_URL, null, {
+            params: {
+              apikey: SEMAPHORE_API_KEY,
+              number: recipientsString,
+              message,
+              sendername: SENDER_NAME,
+            },
+          });
+
+          meta.count += 1;
+          meta.lastSent = now;
+          await metaRef.set(meta);
+
+          results.push({ sensorName, distance, sentTo: recipients.length });
+        } catch (err) {
+          console.error(`Failed to send SMS for ${sensorName}:`, err.message);
         }
-
-        meta.count += 1;
-        meta.lastSent = now;
-        await metaRef.set(meta);
-
-        results.push({ sensorName, distance, sentTo: recipients.length });
       }
 
       return { success: true, results };
@@ -186,15 +198,15 @@ exports.autoFloodAlertSMS = onSchedule(
 );
 
 // ================================
-// Scheduled: Update device status (Region Set)
+// Scheduled: Update device status
 // ================================
 exports.updateDeviceStatus = onSchedule(
   {
     schedule: "every 2 minutes",
     timeZone: "Asia/Manila",
-    region: "asia-southeast1",  // Region set (no secrets needed here)
+    region: "asia-southeast1",
   },
-  async (event) => {
+  async () => {
     const firestoreDb = getFirestoreDb();
     const now = Date.now();
 
