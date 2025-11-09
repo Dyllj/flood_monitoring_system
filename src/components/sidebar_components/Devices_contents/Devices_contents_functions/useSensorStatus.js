@@ -4,7 +4,7 @@ import { realtimeDB } from "../../../../auth/firebase_auth";
 
 /**
  * Tracks sensor distance and auto-updates device status (active/inactive)
- * If no data received for 90 seconds, mark inactive.
+ * Status is based on last reading timestamp.
  */
 export const useSensorStatus = (devices, inactiveTimeout = 90_000) => {
   const [sensorData, setSensorData] = useState({});
@@ -13,19 +13,21 @@ export const useSensorStatus = (devices, inactiveTimeout = 90_000) => {
   useEffect(() => {
     if (!devices.length) return;
 
-    const initialData = {};
     const listeners = [];
 
-    // Set all devices inactive initially
     devices.forEach((device) => {
-      initialData[device.sensorName] = {
-        distance: 0,
-        timestamp: null,
-        status: "inactive",
-      };
-
       const sensorRef = ref(realtimeDB, `realtime/${device.sensorName}`);
       let timeoutId;
+
+      // Initialize device as inactive
+      setSensorData((prev) => ({
+        ...prev,
+        [device.sensorName]: {
+          distance: 0,
+          timestamp: null,
+          status: "inactive",
+        },
+      }));
 
       const unsubscribe = onValue(sensorRef, (snapshot) => {
         const data = snapshot.val();
@@ -33,17 +35,22 @@ export const useSensorStatus = (devices, inactiveTimeout = 90_000) => {
 
         clearTimeout(timeoutId);
 
-        // Update device as active
+        const now = Date.now();
+        const lastReadingTime = data.timestamp || now;
+
+        // Compute active/inactive based on last reading
+        const isActive = now - lastReadingTime < inactiveTimeout;
+
         setSensorData((prev) => ({
           ...prev,
           [device.sensorName]: {
             distance: data.distance,
-            timestamp: data.timestamp,
-            status: "active",
+            timestamp: lastReadingTime,
+            status: isActive ? "active" : "inactive",
           },
         }));
 
-        // Set back to inactive after timeout
+        // Schedule automatic inactive if no new reading comes
         timeoutId = setTimeout(() => {
           setSensorData((prev) => ({
             ...prev,
@@ -54,7 +61,7 @@ export const useSensorStatus = (devices, inactiveTimeout = 90_000) => {
           }));
         }, inactiveTimeout);
 
-        // Chart history
+        // Update chart history
         setChartHistory((prev) => {
           const prevData = prev[device.sensorName] || [];
           const newPoint = {
@@ -72,8 +79,6 @@ export const useSensorStatus = (devices, inactiveTimeout = 90_000) => {
         off(sensorRef, "value", unsubscribe);
       });
     });
-
-    setSensorData(initialData);
 
     return () => listeners.forEach((unsub) => unsub());
   }, [devices, inactiveTimeout]);
