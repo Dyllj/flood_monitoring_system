@@ -7,9 +7,8 @@ import { MdDeleteOutline } from "react-icons/md";
 import { IoSettingsOutline } from "react-icons/io5";
 import { MdOutlineNotificationsActive } from "react-icons/md";
 import AddDevice from "../../add-forms/Add-device";
-import { db, realtimeDB } from "../../../auth/firebase_auth";
+import { db } from "../../../auth/firebase_auth";
 import { collection, onSnapshot } from "firebase/firestore";
-import { ref, onValue, off } from "firebase/database";
 import {
   AreaChart,
   Area,
@@ -27,12 +26,11 @@ import { getColor } from "./Devices_contents_functions/getColor";
 import SmsAlertSuccess from "../../custom-notification/for-sms-alert/sms-alert-success";
 import SmsAlertFailed from "../../custom-notification/for-sms-alert/sms-alert-failed";
 import { handleSendSms } from "./Devices_contents_functions/handleSendSms";
+import { useSensorStatus } from "./Devices_contents_functions/useSensorStatus";
 
 const Devices_contents = ({ isAdmin }) => {
   const [showAddDevice, setShowAddDevice] = useState(false);
   const [devices, setDevices] = useState([]);
-  const [sensorData, setSensorData] = useState({});
-  const [chartHistory, setChartHistory] = useState({});
   const [editingDevice, setEditingDevice] = useState(null);
   const [editData, setEditData] = useState({
     sensorName: "",
@@ -56,62 +54,15 @@ const Devices_contents = ({ isAdmin }) => {
         updatedDevices.push({ id: doc.id, ...doc.data() })
       );
       setDevices(updatedDevices);
-
-      // 🔹 Extract active/inactive status for dots
-      snapshot.forEach((doc) => {
-        const device = doc.data();
-        setSensorData((prev) => ({
-          ...prev,
-          [device.sensorName]: {
-            ...prev[device.sensorName],
-            status: device.status || "inactive",
-          },
-        }));
-      });
     });
 
     return () => unsub();
   }, []);
 
   // ----------------------------
-  // Realtime DB listener for distance readings (in meters)
+  // Use custom hook for sensor status & chart history
   // ----------------------------
-  useEffect(() => {
-    const listeners = [];
-
-    devices.forEach((device) => {
-      const sensorRef = ref(realtimeDB, `realtime/${device.sensorName}`);
-      const unsubscribe = onValue(sensorRef, (snapshot) => {
-        const data = snapshot.val();
-        if (data) {
-          setSensorData((prev) => ({
-            ...prev,
-            [device.sensorName]: {
-              distance: data.distance, // in meters
-              timestamp: data.timestamp,
-              status: prev[device.sensorName]?.status || "inactive",
-            },
-          }));
-
-          // Add chart data (using meters)
-          setChartHistory((prev) => {
-            const prevData = prev[device.sensorName] || [];
-            const newPoint = {
-              time: new Date().toLocaleTimeString(),
-              value: data.distance, // meters (removed * 100)
-            };
-            const updated = [...prevData, newPoint];
-            if (updated.length > 30) updated.shift();
-            return { ...prev, [device.sensorName]: updated };
-          });
-        }
-      });
-
-      listeners.push(() => off(sensorRef, "value", unsubscribe));
-    });
-
-    return () => listeners.forEach((unsub) => unsub());
-  }, [devices]);
+  const { sensorData, chartHistory } = useSensorStatus(devices);
 
   // ----------------------------
   // Tooltip for non-editable sensor name
@@ -183,7 +134,7 @@ const Devices_contents = ({ isAdmin }) => {
           const color = getColor(distance, normalLevel, alertLevel);
           const chartData = chartHistory[device.sensorName] || [];
           const percentage = Math.min((distance / maxHeight) * 100, 100);
-          const dotStatus = reading.status || "active";
+          const dotStatus = reading.status || "inactive";
 
           return (
             <div key={device.id} className="device-card shadow">
@@ -216,18 +167,19 @@ const Devices_contents = ({ isAdmin }) => {
                           try {
                             await handleSendSms(device.sensorName);
                             setShowSmsAlert(true);
-                            setTimeout(() => setShowSmsAlert(false), 4000); // auto-hide after 4s
+                            setTimeout(() => setShowSmsAlert(false), 4000);
                           } catch (err) {
                             console.log(err);
                             setShowSmsAlertFailed(true);
-                            setTimeout(() => setShowSmsAlertFailed(false), 4000);
+                            setTimeout(
+                              () => setShowSmsAlertFailed(false),
+                              4000
+                            );
                           }
                         }}
                       >
                         <MdOutlineNotificationsActive />
                       </button>
-
-
 
                       {/* ⚙️ Edit */}
                       <button
@@ -301,7 +253,7 @@ const Devices_contents = ({ isAdmin }) => {
               <div className="waterlevel-chart-container">
                 <ResponsiveContainer>
                   <AreaChart data={chartData}>
-                    <XAxis dataKey="time"/>
+                    <XAxis dataKey="time" />
                     <YAxis domain={[0, maxHeight]} />
                     <CartesianGrid stroke="rgba(16,16,16,0.5)" />
 
@@ -313,11 +265,7 @@ const Devices_contents = ({ isAdmin }) => {
                         x2="0"
                         y2="1"
                       >
-                        <stop
-                          offset="0%"
-                          stopColor={color}
-                          stopOpacity={0.6}
-                        >
+                        <stop offset="0%" stopColor={color} stopOpacity={0.6}>
                           <animate
                             attributeName="stopColor"
                             values={`${color};${color}`}
@@ -325,11 +273,7 @@ const Devices_contents = ({ isAdmin }) => {
                             fill="freeze"
                           />
                         </stop>
-                        <stop
-                          offset="100%"
-                          stopColor={color}
-                          stopOpacity={0.1}
-                        >
+                        <stop offset="100%" stopColor={color} stopOpacity={0.1}>
                           <animate
                             attributeName="stopColor"
                             values={`${color};${color}`}
