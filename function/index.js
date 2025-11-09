@@ -120,7 +120,9 @@ exports.sendFloodAlertSMS = onCall(
 // ================================
 exports.autoFloodAlertSMS = onSchedule(
   "every 10 minutes",
-  { timeZone: "Asia/Manila", region: "asia-southeast1", secrets: ["SEMAPHORE_API_KEY", "SENDER_NAME"] },
+  { timeZone: "Asia/Manila", 
+    region: "asia-southeast1", 
+    secrets: ["SEMAPHORE_API_KEY", "SENDER_NAME"] },
   async () => {
     const firestoreDb = getFirestoreDb();
     const rtdb = getRtdb();
