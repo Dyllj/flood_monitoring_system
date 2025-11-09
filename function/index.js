@@ -1,8 +1,10 @@
 // ================================
-// 🌊 FLOOD ALERT SYSTEM - AUTO SMS ALERT
+// 🌊 FLOOD ALERT SYSTEM - FULL SMS ALERT
+// Manual + Automatic SMS
 // Auto SMS: max 3/day, 5-hour cooldown, Semaphore V4 API compliant
 // ================================
 
+const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { onValueWritten } = require("firebase-functions/v2/database");
 const admin = require("firebase-admin");
 const { FieldValue } = require("firebase-admin/firestore");
@@ -50,12 +52,11 @@ async function sendSemaphoreSMS(apiKey, number, message, senderName) {
     { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
   );
 
-  // ✅ Treat array of messages as success
   if (!response.data || !Array.isArray(response.data)) {
     throw new Error(`Semaphore API returned invalid response: ${JSON.stringify(response.data)}`);
   }
 
-  console.log(`✅ Auto SMS queued for ${number}`, response.data);
+  console.log(`✅ SMS queued for ${number}`, response.data);
   return response.data;
 }
 
@@ -73,7 +74,88 @@ function getStatus(distance, device = {}) {
 }
 
 // ================================
-// Auto Flood Alert
+// Manual SMS Alert
+// ================================
+exports.sendFloodAlertSMS = onCall(
+  { region: "asia-southeast1", secrets: ["SEMAPHORE_API_KEY", "SENDER_NAME"] },
+  async (request) => {
+    const { sensorName, distance: manualDistance, location: manualLocation } = request.data || {};
+    if (!sensorName) throw new HttpsError("invalid-argument", "Missing sensorName");
+
+    const firestoreDb = getFirestoreDb();
+    const rtdb = getRtdb();
+
+    try {
+      const deviceDoc = await firestoreDb.collection("devices").doc(sensorName).get();
+      if (!deviceDoc.exists) throw new HttpsError("not-found", "Device not found");
+      const device = deviceDoc.data();
+
+      // Use manual distance or fetch from Realtime DB
+      let distance;
+      if (manualDistance !== undefined) {
+        distance = Number(manualDistance);
+      } else {
+        const snapshot = await rtdb.ref(`realtime/${sensorName}/distance`).get();
+        if (!snapshot.exists()) throw new HttpsError("not-found", "No distance found in Realtime DB");
+        distance = Number(snapshot.val());
+      }
+
+      const roundedDistance = Math.round(distance);
+      const status = getStatus(distance, device);
+      const location = manualLocation || device.location || "Unknown";
+
+      const message = `MANUAL FLOOD ALERT
+Maayung Adlaw!
+Ang tubig sa ${location} naabot na ang lebel na ${roundedDistance}m (${status}).
+Pag-alerto ug pag-andam sa posibleng baha.
+Time: ${new Date().toLocaleString("en-PH", { timeZone: "Asia/Manila" })}
+- Sent by Molave Municipal Risk Reduction and Management Office`;
+
+      const personnelSnap = await firestoreDb.collection("Authorized_personnel").get();
+      if (personnelSnap.empty) throw new HttpsError("not-found", "No authorized personnel found");
+
+      const results = await Promise.all(
+        personnelSnap.docs.map(async doc => {
+          const person = doc.data();
+          const number = formatNumber(person.Phone_number);
+          if (!number) return { name: person.Contact_name, success: false, smsResponse: "No number" };
+          const smsResponse = await sendSemaphoreSMS(SEMAPHORE_API_KEY, number, message, SENDER_NAME);
+          return { name: person.Contact_name, success: true, smsResponse };
+        })
+      );
+
+      // Update Realtime DB
+      await rtdb.ref(`alerts/${sensorName}`).set({
+        alert_sent: true,
+        auto_sent: false,
+        distance: roundedDistance,
+        location,
+        status,
+        timestamp: Date.now(),
+      });
+
+      // Log alert in Firestore
+      await firestoreDb.collection("Alert_logs").add({
+        type: "Manual",
+        sensorName,
+        distance: roundedDistance,
+        location,
+        status,
+        timestamp: FieldValue.serverTimestamp(),
+        message,
+      });
+
+      return { success: true, results };
+
+    } catch (err) {
+      console.error("❌ Manual alert failed:", err.message);
+      throw new HttpsError("internal", err.message);
+    }
+  }
+);
+
+// ================================
+// Auto SMS Alert
 // ================================
 exports.autoFloodAlert = onValueWritten(
   { ref: "/realtime/{deviceName}", region: "asia-southeast1", secrets: ["SEMAPHORE_API_KEY", "SENDER_NAME"] },
@@ -90,20 +172,17 @@ exports.autoFloodAlert = onValueWritten(
     const roundedDistance = Math.round(distance);
 
     try {
-      // Fetch device metadata from Firestore
       const deviceDoc = await firestoreDb.collection("devices").doc(deviceName).get();
       if (!deviceDoc.exists) return;
       const device = deviceDoc.data();
 
-      // Skip if device is inactive
       if (device.status === "inactive") return;
 
       const status = getStatus(distance, device);
       const location = device.location || "Unknown";
       const sensorName = device.sensorName || deviceName;
 
-      // Check daily limit and cooldown
-      const now = Date.now();
+      // Daily limit and cooldown
       const lastAutoSmsSent = device.lastAutoSmsSent?.toMillis?.() || 0;
       const autoSmsCountToday = device.autoSmsCountToday || 0;
       const autoSmsCountDate = device.autoSmsCountDate || "";
@@ -113,14 +192,12 @@ exports.autoFloodAlert = onValueWritten(
       if (autoSmsCountDate !== today) currentCount = 0;
 
       const cooldown = 5 * 60 * 60 * 1000; // 5 hours
-      if (Date.now() - lastAutoSmsSent < cooldown) return; // cooldown not finished
-      if (currentCount >= 3) return; // daily limit reached
+      if (Date.now() - lastAutoSmsSent < cooldown) return;
+      if (currentCount >= 3) return;
 
-      // Fetch authorized personnel
       const personnelSnap = await firestoreDb.collection("Authorized_personnel").get();
       if (personnelSnap.empty) return;
 
-      // Prepare message
       const message = `AUTOMATIC FLOOD ALERT
 Maayung Adlaw!
 Ang tubig sa ${location} naabot na ang lebel na ${roundedDistance}m (${status}).
@@ -128,7 +205,6 @@ Pag-alerto ug pag-andam sa posibleng baha.
 Time: ${new Date().toLocaleString("en-PH", { timeZone: "Asia/Manila" })}
 - Sent by Molave Municipal Risk Reduction and Management Office`;
 
-      // Send SMS
       await Promise.all(
         personnelSnap.docs.map(async doc => {
           const person = doc.data();
@@ -159,7 +235,7 @@ Time: ${new Date().toLocaleString("en-PH", { timeZone: "Asia/Manila" })}
         message,
       });
 
-      // Update device with last sent timestamp and daily counter
+      // Update device counter
       await firestoreDb.collection("devices").doc(deviceName).update({
         lastAutoSmsSent: FieldValue.serverTimestamp(),
         autoSmsCountToday: currentCount + 1,
