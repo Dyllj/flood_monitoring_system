@@ -1,14 +1,18 @@
 {
   "functions": [
     {
-      "source": "function",
+      "source": "functions",
       "codebase": "default",
+      "disallowLegacyRuntimeConfig": true,
       "ignore": [
         "node_modules",
         ".git",
         "firebase-debug.log",
         "firebase-debug.*.log",
         "*.local"
+      ],
+      "predeploy": [
+        "npm --prefix functions run lint"
       ]
     }
   ],
@@ -16,20 +20,11 @@
     "rules": "database.rules.json"
   },
   "emulators": {
-    "functions": {
-      "port": 5001
-    },
-    "database": {
-      "port": 9100
-    },
-    "ui": {
-      "enabled": true,
-      "port": 4000
-    },
+    "functions": { "port": 5001 },
+    "database": { "port": 9100 },
+    "ui": { "enabled": true, "port": 4000 },
     "singleProjectMode": false,
-    "firestore": {
-      "port": 8080
-    }
+    "firestore": { "port": 8080 }
   },
   "firestore": {
     "database": "(default)",
@@ -45,10 +40,7 @@
       "**/node_modules/**"
     ],
     "rewrites": [
-      {
-        "source": "**",
-        "destination": "/index.html"
-      }
+      { "source": "**", "destination": "/index.html" }
     ]
   }
 }

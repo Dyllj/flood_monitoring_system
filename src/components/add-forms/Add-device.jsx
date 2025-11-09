@@ -1,3 +1,7 @@
+// ================================
+// 🌊 ADD DEVICE FORM COMPONENT
+// ================================
+
 import "./Forms.css";
 import { useState } from "react";
 import { MdOutlineSensors } from "react-icons/md";
@@ -8,6 +12,9 @@ import AddDeviceSuccess from "../custom-notification/for-add-device/add-device-s
 import AddDeviceFailed from "../custom-notification/for-add-device/add-device-failed";
 
 const AddDevice = ({ onClose }) => {
+  // ================================
+  // ✅ Form State
+  // ================================
   const [sensorName, setSensorName] = useState("");
   const [deviceLocation, setDeviceLocation] = useState("");
   const [maxHeight, setMaxHeight] = useState("");
@@ -15,14 +22,20 @@ const AddDevice = ({ onClose }) => {
   const [normalLevel, setNormalLevel] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // ✅ Notification states
+  // ================================
+  // ✅ Notification State
+  // ================================
   const [showSuccess, setShowSuccess] = useState(false);
   const [showFailed, setShowFailed] = useState(false);
   const [failedMsg, setFailedMsg] = useState({ message: "", subText: "" });
 
+  // ================================
+  // ✅ Handle Form Submission
+  // ================================
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    // 🔹 Validate required fields
     if (!sensorName || !deviceLocation || !maxHeight || !alertLevel || !normalLevel) {
       setFailedMsg({
         message: "Missing required fields",
@@ -32,12 +45,13 @@ const AddDevice = ({ onClose }) => {
       return;
     }
 
-    try {
-      setLoading(true);
-      const deviceRef = ref(realtimeDB, `realtime/${sensorName}`);
+    setLoading(true);
 
-      // ✅ Check if sensor exists in RealtimeDB
+    try {
+      // 🔹 Check if sensor exists in RealtimeDB
+      const deviceRef = ref(realtimeDB, `realtime/${sensorName}`);
       const snapshot = await get(deviceRef);
+
       if (!snapshot.exists()) {
         setFailedMsg({
           message: "Device not found",
@@ -47,29 +61,28 @@ const AddDevice = ({ onClose }) => {
         return;
       }
 
-      // ✅ Store directly in meters (no conversion)
+      // 🔹 Prepare device data
       const deviceData = {
         sensorName,
         location: deviceLocation,
-        maxHeight: parseFloat(maxHeight),  // stored in meters
-        alertLevel: parseFloat(alertLevel), // stored in meters
-        normalLevel: parseFloat(normalLevel), // stored in meters
-        unit: "m", // 🔹 optional: helps you identify that these are in meters
-        status: "active",
+        maxHeight: parseFloat(maxHeight),
+        normalLevel: parseFloat(normalLevel),
+        alertLevel: parseFloat(alertLevel),
+        unit: "m",
+        waterLevelStatus: "normal",
+        status: "inactive",
         lastUpdate: serverTimestamp(),
         createdAt: serverTimestamp(),
       };
 
-      // ✅ Save using sensorName as document ID
+      // 🔹 Save device in Firestore
       await setDoc(doc(collection(db, "devices"), sensorName), deviceData);
 
-      // ✅ Show success notification
+      // 🔹 Show success notification
       setShowSuccess(true);
 
-      // ✅ Auto close form after short delay
-      setTimeout(() => {
-        onClose();
-      }, 2000);
+      // 🔹 Auto-close form after 2 seconds
+      setTimeout(() => onClose(), 2000);
     } catch (error) {
       console.error(error);
       setFailedMsg({
@@ -82,17 +95,13 @@ const AddDevice = ({ onClose }) => {
     }
   };
 
+  // ================================
+  // ✅ JSX
+  // ================================
   return (
     <div>
-      {/* ✅ Notifications */}
-      <div
-        style={{
-          position: "fixed",
-          top: "1.5rem",
-          right: "1.5rem",
-          zIndex: 9999,
-        }}
-      >
+      {/* Notifications */}
+      <div style={{ position: "fixed", top: "1.5rem", right: "1.5rem", zIndex: 9999 }}>
         {showSuccess && (
           <AddDeviceSuccess
             onClose={() => setShowSuccess(false)}
@@ -109,11 +118,13 @@ const AddDevice = ({ onClose }) => {
         )}
       </div>
 
+      {/* Form Header */}
       <div className="add-device-title">
         <MdOutlineSensors />
         <h2>Add New Device</h2>
       </div>
 
+      {/* Form */}
       <div className="add-device-form">
         <form onSubmit={handleSubmit}>
           <label id="label1">
