@@ -178,9 +178,11 @@ exports.autoFloodAlertSMS = onSchedule(
 // Scheduled: Update device status
 // ================================
 exports.updateDeviceStatus = onSchedule(
-  "every 2 minutes",
-  { timeZone: "Asia/Manila" },
-  async () => {
+  {
+    schedule: "every 2 minutes",
+    timeZone: "Asia/Manila",
+  },
+  async (event) => {
     const firestoreDb = getFirestoreDb();
     const now = Date.now();
 
@@ -202,6 +204,7 @@ exports.updateDeviceStatus = onSchedule(
       });
 
       await batch.commit();
+      console.log("✅ Device statuses updated successfully");
       return null;
     } catch (err) {
       console.error("Failed to update device statuses:", err.message);
