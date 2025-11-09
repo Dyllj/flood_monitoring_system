@@ -49,10 +49,10 @@ ${timeframe}
 }
 
 // ================================
-// ☎️ Manual SMS Alert Function
+// ☎️ Manual SMS Alert Function (FIXED: CORS Enabled, Region Set, Secrets Bound)
 // ================================
 exports.sendFloodAlertSMS = onCall(
-  { cors: true },  // <-- Add this to enable CORS
+  { cors: true, region: "asia-southeast1", secrets: ["SEMAPHORE_API_KEY", "SENDER_NAME"] },  // CORS, region, and secrets bound
   async (request) => {
     const { sensorName } = request.data || {};
     if (!sensorName) throw new HttpsError("invalid-argument", "Missing sensorName");
@@ -76,7 +76,12 @@ exports.sendFloodAlertSMS = onCall(
       const personnelSnap = await firestoreDb.collection("Authorized_personnel").get();
       if (personnelSnap.empty) throw new HttpsError("not-found", "No authorized personnel found.");
 
-      const recipients = personnelSnap.docs.map((doc) => doc.data().Phone_number);
+      // IMPROVED: Filter for valid Philippine phone numbers (starts with "09")
+      const recipients = personnelSnap.docs
+        .map((doc) => doc.data().Phone_number)
+        .filter((number) => number && typeof number === "string" && number.startsWith("09"));
+      if (recipients.length === 0) throw new HttpsError("not-found", "No valid phone numbers found.");
+
       const message = buildFloodMessage(location, distance, waterLevelStatus);
 
       for (const number of recipients) {
@@ -98,12 +103,15 @@ exports.sendFloodAlertSMS = onCall(
 );
 
 // ================================
-// 🔔 Automatic SMS Alert Function (3x/day, 5h cooldown)
+// 🔔 Automatic SMS Alert Function (3x/day, 5h cooldown, Region Set, Secrets Bound, Force Redeploy)
 // ================================
 exports.autoFloodAlertSMS = onSchedule(
   "every 10 minutes",
-  { timeZone: "Asia/Manila" },
+  { timeZone: "Asia/Manila", region: "asia-southeast1", secrets: ["SEMAPHORE_API_KEY", "SENDER_NAME"] },  // Region and secrets bound
   async () => {
+    // Force redeploy to asia-southeast1 (dummy change to trigger update)
+    console.log("Region update for asia-southeast1");
+
     const firestoreDb = getFirestoreDb();
     const rtdb = getRtdb();
     const now = Date.now();
@@ -178,12 +186,13 @@ exports.autoFloodAlertSMS = onSchedule(
 );
 
 // ================================
-// Scheduled: Update device status
+// Scheduled: Update device status (Region Set)
 // ================================
 exports.updateDeviceStatus = onSchedule(
   {
     schedule: "every 2 minutes",
     timeZone: "Asia/Manila",
+    region: "asia-southeast1",  // Region set (no secrets needed here)
   },
   async (event) => {
     const firestoreDb = getFirestoreDb();
