@@ -1,10 +1,9 @@
 // ================================
-// 🌊 FLOOD ALERT SYSTEM - FIXED MANUAL SMS
-// Automatically fetches distance from Realtime DB if not provided
-// Handles Semaphore V4 API responses correctly
+// 🌊 FLOOD ALERT SYSTEM - AUTO SMS ALERT
+// Auto SMS: max 3/day, 5-hour cooldown, Semaphore V4 API compliant
 // ================================
 
-const { onCall, HttpsError } = require("firebase-functions/v2/https");
+const { onValueWritten } = require("firebase-functions/v2/database");
 const admin = require("firebase-admin");
 const { FieldValue } = require("firebase-admin/firestore");
 const axios = require("axios");
@@ -39,31 +38,25 @@ async function sendSemaphoreSMS(apiKey, number, message, senderName) {
   if (!number) throw new Error("Recipient number missing");
   if (!message) throw new Error("Message content missing");
 
-  try {
-    const payload = new URLSearchParams();
-    payload.append("apikey", apiKey);
-    payload.append("number", number);
-    payload.append("message", message);
-    if (senderName) payload.append("sendername", senderName);
+  const payload = new URLSearchParams();
+  payload.append("apikey", apiKey);
+  payload.append("number", number);
+  payload.append("message", message);
+  if (senderName) payload.append("sendername", senderName);
 
-    const response = await axios.post(
-      "https://api.semaphore.co/api/v4/messages",
-      payload,
-      { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
-    );
+  const response = await axios.post(
+    "https://api.semaphore.co/api/v4/messages",
+    payload,
+    { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
+  );
 
-    // ✅ Treat array of messages as success
-    if (!response.data || !Array.isArray(response.data)) {
-      throw new Error(`Semaphore API returned invalid response: ${JSON.stringify(response.data)}`);
-    }
-
-    console.log(`✅ SMS queued for ${number}`, response.data);
-    return response.data;
-
-  } catch (err) {
-    console.error(`❌ Failed to send SMS to ${number}:`, err.response?.data || err.message);
-    throw err;
+  // ✅ Treat array of messages as success
+  if (!response.data || !Array.isArray(response.data)) {
+    throw new Error(`Semaphore API returned invalid response: ${JSON.stringify(response.data)}`);
   }
+
+  console.log(`✅ Auto SMS queued for ${number}`, response.data);
+  return response.data;
 }
 
 // --------------------
@@ -80,64 +73,75 @@ function getStatus(distance, device = {}) {
 }
 
 // ================================
-// Fixed Manual SMS Alert
+// Auto Flood Alert
 // ================================
-exports.sendFloodAlertSMS = onCall(
-  { region: "asia-southeast1", secrets: ["SEMAPHORE_API_KEY", "SENDER_NAME"] },
-  async (request) => {
-    const { sensorName, distance: manualDistance, location: manualLocation } = request.data || {};
-    if (!sensorName) throw new HttpsError("invalid-argument", "Missing sensorName");
+exports.autoFloodAlert = onValueWritten(
+  { ref: "/realtime/{deviceName}", region: "asia-southeast1", secrets: ["SEMAPHORE_API_KEY", "SENDER_NAME"] },
+  async (event) => {
+    const deviceName = event.params.deviceName;
+    const newData = event.data.after.val();
+    if (!newData || newData.distance === undefined) return;
 
     const firestoreDb = getFirestoreDb();
     const rtdb = getRtdb();
+    const apiKey = SEMAPHORE_API_KEY;
+
+    const distance = Number(newData.distance);
+    const roundedDistance = Math.round(distance);
 
     try {
       // Fetch device metadata from Firestore
-      const deviceDoc = await firestoreDb.collection("devices").doc(sensorName).get();
-      if (!deviceDoc.exists) throw new HttpsError("not-found", "Device not found");
+      const deviceDoc = await firestoreDb.collection("devices").doc(deviceName).get();
+      if (!deviceDoc.exists) return;
       const device = deviceDoc.data();
 
-      // Use manual distance if provided, otherwise fetch from Realtime DB
-      let distance;
-      if (manualDistance !== undefined) {
-        distance = Number(manualDistance);
-      } else {
-        const snapshot = await rtdb.ref(`realtime/${sensorName}/distance`).get();
-        if (!snapshot.exists()) throw new HttpsError("not-found", "No distance found in Realtime DB");
-        distance = Number(snapshot.val());
-      }
+      // Skip if device is inactive
+      if (device.status === "inactive") return;
 
-      const roundedDistance = Math.round(distance);
       const status = getStatus(distance, device);
-      const location = manualLocation || device.location || "Unknown";
+      const location = device.location || "Unknown";
+      const sensorName = device.sensorName || deviceName;
 
-      // Prepare alert message
-      const message = `MANUAL FLOOD ALERT
+      // Check daily limit and cooldown
+      const now = Date.now();
+      const lastAutoSmsSent = device.lastAutoSmsSent?.toMillis?.() || 0;
+      const autoSmsCountToday = device.autoSmsCountToday || 0;
+      const autoSmsCountDate = device.autoSmsCountDate || "";
+      const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Manila" });
+
+      let currentCount = autoSmsCountToday;
+      if (autoSmsCountDate !== today) currentCount = 0;
+
+      const cooldown = 5 * 60 * 60 * 1000; // 5 hours
+      if (Date.now() - lastAutoSmsSent < cooldown) return; // cooldown not finished
+      if (currentCount >= 3) return; // daily limit reached
+
+      // Fetch authorized personnel
+      const personnelSnap = await firestoreDb.collection("Authorized_personnel").get();
+      if (personnelSnap.empty) return;
+
+      // Prepare message
+      const message = `AUTOMATIC FLOOD ALERT
 Maayung Adlaw!
 Ang tubig sa ${location} naabot na ang lebel na ${roundedDistance}m (${status}).
 Pag-alerto ug pag-andam sa posibleng baha.
 Time: ${new Date().toLocaleString("en-PH", { timeZone: "Asia/Manila" })}
 - Sent by Molave Municipal Risk Reduction and Management Office`;
 
-      // Fetch authorized personnel
-      const personnelSnap = await firestoreDb.collection("Authorized_personnel").get();
-      if (personnelSnap.empty) throw new HttpsError("not-found", "No authorized personnel found");
-
-      // Send SMS to all authorized personnel
-      const results = await Promise.all(
+      // Send SMS
+      await Promise.all(
         personnelSnap.docs.map(async doc => {
           const person = doc.data();
           const number = formatNumber(person.Phone_number);
-          if (!number) return { name: person.Contact_name, success: false, smsResponse: "No number" };
-          const smsResponse = await sendSemaphoreSMS(SEMAPHORE_API_KEY, number, message, SENDER_NAME);
-          return { name: person.Contact_name, success: true, smsResponse };
+          if (!number) return;
+          await sendSemaphoreSMS(apiKey, number, message, SENDER_NAME);
         })
       );
 
       // Update Realtime DB
-      await rtdb.ref(`alerts/${sensorName}`).set({
+      await rtdb.ref(`alerts/${deviceName}`).set({
         alert_sent: true,
-        auto_sent: false,
+        auto_sent: true,
         distance: roundedDistance,
         location,
         status,
@@ -146,7 +150,7 @@ Time: ${new Date().toLocaleString("en-PH", { timeZone: "Asia/Manila" })}
 
       // Log alert in Firestore
       await firestoreDb.collection("Alert_logs").add({
-        type: "Manual",
+        type: "Automatic",
         sensorName,
         distance: roundedDistance,
         location,
@@ -155,11 +159,17 @@ Time: ${new Date().toLocaleString("en-PH", { timeZone: "Asia/Manila" })}
         message,
       });
 
-      return { success: true, results };
+      // Update device with last sent timestamp and daily counter
+      await firestoreDb.collection("devices").doc(deviceName).update({
+        lastAutoSmsSent: FieldValue.serverTimestamp(),
+        autoSmsCountToday: currentCount + 1,
+        autoSmsCountDate: today,
+      });
+
+      console.log(`✅ Automatic alert sent for ${deviceName}`);
 
     } catch (err) {
-      console.error("❌ Manual alert failed:", err.message);
-      throw new HttpsError("internal", err.message);
+      console.error("❌ Auto alert failed:", err.message);
     }
   }
 );
