@@ -1,31 +1,14 @@
 {
-  "functions": [
-    {
-      "codebase": "default",
-      "ignore": [
-        "node_modules",
-        ".git",
-        "firebase-debug.log",
-        "firebase-debug.*.log",
-        "*.local"
-      ],
-      "source": "function"
-    },
-    {
-      "codebase": "firebase_function",
-      "disallowLegacyRuntimeConfig": true,
-      "ignore": [
-        "node_modules",
-        ".git",
-        "firebase-debug.log",
-        "firebase-debug.*.log",
-        "*.local"
-      ],
-      "source": "function",
-      "predeploy": [
-      ]
-    }
-  ],
+  "functions": {
+    "source": "function",
+    "ignore": [
+      "node_modules",
+      ".git",
+      "firebase-debug.log",
+      "firebase-debug.*.log",
+      "*.local"
+    ]
+  },
   "database": {
     "rules": "database.rules.json"
   },
