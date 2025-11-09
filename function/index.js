@@ -1,6 +1,7 @@
 // ================================
 // 🌊 FLOOD ALERT SYSTEM - FIXED MANUAL SMS
 // Automatically fetches distance from Realtime DB if not provided
+// Handles Semaphore V4 API responses correctly
 // ================================
 
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
@@ -38,24 +39,31 @@ async function sendSemaphoreSMS(apiKey, number, message, senderName) {
   if (!number) throw new Error("Recipient number missing");
   if (!message) throw new Error("Message content missing");
 
-  const payload = new URLSearchParams();
-  payload.append("apikey", apiKey);
-  payload.append("number", number);
-  payload.append("message", message);
-  if (senderName) payload.append("sendername", senderName);
+  try {
+    const payload = new URLSearchParams();
+    payload.append("apikey", apiKey);
+    payload.append("number", number);
+    payload.append("message", message);
+    if (senderName) payload.append("sendername", senderName);
 
-  const response = await axios.post(
-    "https://api.semaphore.co/api/v4/messages",
-    payload,
-    { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
-  );
+    const response = await axios.post(
+      "https://api.semaphore.co/api/v4/messages",
+      payload,
+      { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
+    );
 
-  if (!response.data || !response.data.success) {
-    throw new Error(`Semaphore API failed: ${JSON.stringify(response.data)}`);
+    // ✅ Treat array of messages as success
+    if (!response.data || !Array.isArray(response.data)) {
+      throw new Error(`Semaphore API returned invalid response: ${JSON.stringify(response.data)}`);
+    }
+
+    console.log(`✅ SMS queued for ${number}`, response.data);
+    return response.data;
+
+  } catch (err) {
+    console.error(`❌ Failed to send SMS to ${number}:`, err.response?.data || err.message);
+    throw err;
   }
-
-  console.log(`✅ SMS sent to ${number}`);
-  return response.data;
 }
 
 // --------------------
