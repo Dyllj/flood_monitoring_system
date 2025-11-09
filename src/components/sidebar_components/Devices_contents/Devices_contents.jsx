@@ -24,9 +24,9 @@ import { handleEdit } from "./Devices_contents_functions/handleEdit";
 import { handleEditSubmit } from "./Devices_contents_functions/handleEditSubmit";
 import { getStatus } from "./Devices_contents_functions/getStatus";
 import { getColor } from "./Devices_contents_functions/getColor";
+import SmsAlertSuccess from "../../custom-notification/for-sms-alert/sms-alert-success";
+import SmsAlertFailed from "../../custom-notification/for-sms-alert/sms-alert-failed";
 import { handleSendSms } from "./Devices_contents_functions/handleSendSms";
-// import SmsAlertSuccess from "../../custom-notification/for-sms-alert/sms-alert-success";
-// import SmsAlertFailed from "../../custom-notification/for-sms-alert/sms-alert-failed";
 
 const Devices_contents = ({ isAdmin }) => {
   const [showAddDevice, setShowAddDevice] = useState(false);
@@ -43,8 +43,8 @@ const Devices_contents = ({ isAdmin }) => {
     alertLevel: "",
   });
 
-  // const [showSmsAlert, setShowSmsAlert] = useState(false);
-  // const [showSmsAlertFailed, setShowSmsAlertFailed] = useState(false);
+  const [showSmsAlert, setShowSmsAlert] = useState(false);
+  const [showSmsAlertFailed, setShowSmsAlertFailed] = useState(false);
 
   // ----------------------------
   // Firestore listener (with device status)
@@ -149,8 +149,8 @@ const Devices_contents = ({ isAdmin }) => {
   // ----------------------------
   return (
     <>
-      {/* {showSmsAlert && <SmsAlertSuccess />}
-      {showSmsAlertFailed && <SmsAlertFailed />} */}
+      {showSmsAlert && <SmsAlertSuccess />}
+      {showSmsAlertFailed && <SmsAlertFailed />}
 
       <div className="devices-contents"></div>
 
@@ -209,23 +209,25 @@ const Devices_contents = ({ isAdmin }) => {
 
                   {isAdmin && (
                     <>
-                      {/* 🔔 Notify (SMS Alert) */}
+                      {/* 🔔 Send SMS Alert */}
                       <button
                         className="notify-btn"
                         onClick={async () => {
                           try {
-                            const res = await handleSendSms(device.sensorName);
-                            alert(`✅ SMS Alert sent successfully to all authorized personnel!`);
-                            console.log(res);
+                            await handleSendSms(device.sensorName);
+                            setShowSmsAlert(true);
+                            setTimeout(() => setShowSmsAlert(false), 4000); // auto-hide after 4s
                           } catch (err) {
-                              console.error("❌ SMS Alert Error:", err);
-                              alert("❌ Failed to send SMS Alert. Please check your connection or backend logs.");
-                            }
-
+                            console.log(err);
+                            setShowSmsAlertFailed(true);
+                            setTimeout(() => setShowSmsAlertFailed(false), 4000);
+                          }
                         }}
                       >
                         <MdOutlineNotificationsActive />
                       </button>
+
+
 
                       {/* ⚙️ Edit */}
                       <button
