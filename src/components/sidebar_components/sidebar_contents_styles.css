@@ -855,47 +855,53 @@ body {
   animation: smoothFade 1s ease-in-out;
 }
 /* ====================== STATUS DOTS ====================== */
+/* Dot indicator */
 .status-dot {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
   display: inline-block;
-  position: relative;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
   margin-right: 6px;
+  position: relative;
   cursor: default;
 }
 
+/* Colors for active/inactive */
 .status-dot.active {
-  background-color: #4caf50; /* green */
+  background-color: #28c76f; /* green */
 }
-
 .status-dot.inactive {
-  background-color: #f44336; /* red */
+  background-color: #ea5455; /* red */
 }
 
-/* Tooltip container */
+/* Tooltip */
 .status-dot::after {
-  content: attr(data-status); /* uses data-status attribute */
+  content: attr(data-status);
   position: absolute;
-  bottom: 125%; /* show above the dot */
+  bottom: 140%; /* move tooltip slightly above the dot */
   left: 50%;
   transform: translateX(-50%);
-  background-color: #333;
+  background-color: rgba(0, 0, 0, 0.85);
   color: #fff;
-  padding: 4px 8px;
+  padding: 2px 6px;       /* smaller padding */
   border-radius: 4px;
-  font-size: 10px;
+  font-size: 10px;         /* smaller text */
+  line-height: 1.2;
   white-space: nowrap;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.3s;
-  z-index: 10;
+  transition: opacity 0.2s ease;
+  z-index: 999;
+  min-width: 40px;         /* keeps tooltip compact */
+  text-align: center;
 }
 
 /* Show tooltip on hover */
 .status-dot:hover::after {
   opacity: 1;
 }
+
+
 /* Container for search input + icons (make it relative) */
 .search-container {
   position: relative;

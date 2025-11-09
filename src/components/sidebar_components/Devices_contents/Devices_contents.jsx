@@ -45,7 +45,7 @@ const Devices_contents = ({ isAdmin }) => {
   const [showSmsAlertFailed, setShowSmsAlertFailed] = useState(false);
 
   // ----------------------------
-  // Firestore listener (with device status)
+  // Firestore listener for devices
   // ----------------------------
   useEffect(() => {
     const unsub = onSnapshot(collection(db, "devices"), (snapshot) => {
@@ -60,12 +60,12 @@ const Devices_contents = ({ isAdmin }) => {
   }, []);
 
   // ----------------------------
-  // Use custom hook for sensor status & chart history
+  // Realtime data hook
   // ----------------------------
   const { sensorData, chartHistory } = useSensorStatus(devices);
 
   // ----------------------------
-  // Tooltip for non-editable sensor name
+  // Tooltip functions
   // ----------------------------
   const addSensorTooltip = () => {
     const parent = document.querySelector(".sensor-label");
@@ -83,7 +83,7 @@ const Devices_contents = ({ isAdmin }) => {
   };
 
   // ----------------------------
-  // Wrapper for edit (kept in meters)
+  // Edit Wrapper (convert to meters)
   // ----------------------------
   const handleEditWrapper = (device) => {
     const deviceInMeters = {
@@ -102,8 +102,6 @@ const Devices_contents = ({ isAdmin }) => {
     <>
       {showSmsAlert && <SmsAlertSuccess />}
       {showSmsAlertFailed && <SmsAlertFailed />}
-
-      <div className="devices-contents"></div>
 
       <div className="devices_contents2">
         <ImLocation />
@@ -125,16 +123,15 @@ const Devices_contents = ({ isAdmin }) => {
       <div className="devices-grid">
         {devices.map((device) => {
           const reading = sensorData[device.sensorName] || {};
-          const distance = parseFloat(reading.distance) || 0; // meters
+          const distance = parseFloat(reading.distance) || 0;
           const maxHeight = device.maxHeight || 6;
           const normalLevel = device.normalLevel || 2;
           const alertLevel = device.alertLevel || 4;
-
           const status = getStatus(distance, normalLevel, alertLevel);
           const color = getColor(distance, normalLevel, alertLevel);
           const chartData = chartHistory[device.sensorName] || [];
           const percentage = Math.min((distance / maxHeight) * 100, 100);
-          const dotStatus = reading.status || "inactive";
+          const isActive = reading.status === "active";
 
           return (
             <div key={device.id} className="device-card shadow">
@@ -142,10 +139,8 @@ const Devices_contents = ({ isAdmin }) => {
               <div className="device-header">
                 <h3>
                   <span
-                    className={`status-dot ${
-                      dotStatus === "active" ? "active" : "inactive"
-                    }`}
-                    data-status={dotStatus === "active" ? "Active" : "Inactive"}
+                    className={`status-dot ${isActive ? "active" : "inactive"}`}
+                    data-status={isActive ? "Active" : "Inactive"}
                   ></span>
                   {device.sensorName}
                 </h3>
@@ -160,16 +155,22 @@ const Devices_contents = ({ isAdmin }) => {
 
                   {isAdmin && (
                     <>
-                      {/* 🔔 Send SMS Alert */}
+                      {/* 🔔 Manual SMS Alert */}
                       <button
                         className="notify-btn"
                         onClick={async () => {
                           try {
+                            if (!isActive) {
+                              alert(
+                                `⚠️ Cannot send SMS. ${device.sensorName} is inactive.`
+                              );
+                              return;
+                            }
                             await handleSendSms(device.sensorName);
                             setShowSmsAlert(true);
                             setTimeout(() => setShowSmsAlert(false), 4000);
                           } catch (err) {
-                            console.log(err);
+                            console.error(err);
                             setShowSmsAlertFailed(true);
                             setTimeout(
                               () => setShowSmsAlertFailed(false),
@@ -201,7 +202,7 @@ const Devices_contents = ({ isAdmin }) => {
                 </div>
               </div>
 
-              {/* Info Section */}
+              {/* Info */}
               <div className="device-meta">
                 <p>
                   <strong>Location:</strong> {device.location || "Unknown"}
@@ -256,7 +257,6 @@ const Devices_contents = ({ isAdmin }) => {
                     <XAxis dataKey="time" />
                     <YAxis domain={[0, maxHeight]} />
                     <CartesianGrid stroke="rgba(16,16,16,0.5)" />
-
                     <defs>
                       <linearGradient
                         id={`waterColor-${device.id}`}
@@ -265,22 +265,12 @@ const Devices_contents = ({ isAdmin }) => {
                         x2="0"
                         y2="1"
                       >
-                        <stop offset="0%" stopColor={color} stopOpacity={0.6}>
-                          <animate
-                            attributeName="stopColor"
-                            values={`${color};${color}`}
-                            dur="1.2s"
-                            fill="freeze"
-                          />
-                        </stop>
-                        <stop offset="100%" stopColor={color} stopOpacity={0.1}>
-                          <animate
-                            attributeName="stopColor"
-                            values={`${color};${color}`}
-                            dur="1.2s"
-                            fill="freeze"
-                          />
-                        </stop>
+                        <stop offset="0%" stopColor={color} stopOpacity={0.6} />
+                        <stop
+                          offset="100%"
+                          stopColor={color}
+                          stopOpacity={0.1}
+                        />
                       </linearGradient>
                     </defs>
 
@@ -292,7 +282,6 @@ const Devices_contents = ({ isAdmin }) => {
                       strokeWidth={2}
                       dot={false}
                       isAnimationActive
-                      className="waterlevel-area"
                     />
                   </AreaChart>
                 </ResponsiveContainer>
@@ -305,10 +294,7 @@ const Devices_contents = ({ isAdmin }) => {
       {/* Edit Modal */}
       {editingDevice && (
         <div className="modal-overlay" onClick={() => setEditingDevice(null)}>
-          <div
-            className="modal-container"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div className="modal-container" onClick={(e) => e.stopPropagation()}>
             <h2>Edit Device Metadata</h2>
             <form
               onSubmit={(e) =>
