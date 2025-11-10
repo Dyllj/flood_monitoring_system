@@ -65,7 +65,6 @@ async function sendSemaphoreSMS(apiKey, number, message, senderName) {
 // Flood Status Helper
 // --------------------
 function getStatus(distance, device = {}) {
-  // Ensure thresholds are numbers, default in meters
   const normal = Number(device.normalLevel) || 0;
   const alert = Number(device.alertLevel) || 2;
   const max = Number(device.maxHeight) || 4;
@@ -104,7 +103,7 @@ exports.sendFloodAlertSMS = onCall(
       const roundedDistance = Math.round(distance);
       const status = getStatus(distance, device);
       if (status !== "Critical") return;
-      
+
       const location = manualLocation || device.location || "Unknown";
 
       const message = `MANUAL FLOOD ALERT
@@ -146,6 +145,17 @@ Time: ${new Date().toLocaleString("en-PH", { timeZone: "Asia/Manila" })}
         message,
       });
 
+      // Update device with waterLevelStatus and lastUpdate
+      let waterLevelStatus = "Normal";
+      if (distance >= Number(device.alertLevel)) waterLevelStatus = "Elevated";
+      if (distance >= Number(device.maxHeight)) waterLevelStatus = "Critical";
+
+      await firestoreDb.collection("devices").doc(sensorName).update({
+        lastUpdate: FieldValue.serverTimestamp(),
+        waterLevelStatus,
+        status: "active",
+      });
+
       return { success: true, results };
     } catch (err) {
       console.error("❌ Manual alert failed:", err.message);
@@ -173,11 +183,23 @@ exports.autoFloodAlert = onValueWritten(
       const deviceDoc = await firestoreDb.collection("devices").doc(deviceName).get();
       if (!deviceDoc.exists) return;
       const device = deviceDoc.data() || {};
-      if (device.status === "inactive") return;
+
+      // Update waterLevelStatus and lastUpdate first
+      let waterLevelStatus = "Normal";
+      if (distance >= Number(device.alertLevel)) waterLevelStatus = "Elevated";
+      if (distance >= Number(device.maxHeight)) waterLevelStatus = "Critical";
+
+      await firestoreDb.collection("devices").doc(deviceName).update({
+        lastUpdate: FieldValue.serverTimestamp(),
+        waterLevelStatus,
+        status: "active",
+      });
 
       const status = getStatus(distance, device);
       const location = device.location || "Unknown";
       const sensorName = device.sensorName || deviceName;
+
+      if (device.status === "inactive") return;
 
       // Daily limit and cooldown
       const lastAutoSmsSent = device.lastAutoSmsSent?.toMillis?.() || 0;
@@ -230,6 +252,7 @@ Time: ${new Date().toLocaleString("en-PH", { timeZone: "Asia/Manila" })}
         message,
       });
 
+      // Update auto SMS counters
       await firestoreDb.collection("devices").doc(deviceName).update({
         lastAutoSmsSent: FieldValue.serverTimestamp(),
         autoSmsCountToday: currentCount + 1,
@@ -242,31 +265,29 @@ Time: ${new Date().toLocaleString("en-PH", { timeZone: "Asia/Manila" })}
     }
   }
 );
+
 // ================================
 // DEVICE STATUS AUTO TOGGLE
-// Automatically sets devices to "inactive" if no new data for 3 hours
+// Automatically sets devices to "inactive" if no new data for 2 minutes
 // and back to "active" if new data comes in
 // ================================
 exports.checkDeviceActivity = onSchedule(
-  { schedule: "every 2 minutes", region: "asia-southeast1" }, // runs every hour
+  { schedule: "every 2 minutes", region: "asia-southeast1" },
   async () => {
     const firestoreDb = getFirestoreDb();
     const now = Date.now();
-    const THRESHOLD = 2 * 60 * 1000; // 2 minutes in milliseconds
+    const THRESHOLD = 2 * 60 * 1000; // 2 minutes
 
     try {
       const devices = await firestoreDb.collection("devices").get();
       for (const doc of devices.docs) {
         const data = doc.data();
-        const lastUpdate = data.lastDataUpdate?.toMillis?.() || 0;
+        const lastUpdate = data.lastUpdate?.toMillis?.() || 0;
 
-        // If no data for 3+ hours and status not already inactive
         if (now - lastUpdate > THRESHOLD && data.status !== "inactive") {
           await doc.ref.update({ status: "inactive" });
           console.log(`${doc.id} → INACTIVE`);
-        }
-        // If new data received within 3 hours and was inactive
-        else if (now - lastUpdate <= THRESHOLD && data.status === "inactive") {
+        } else if (now - lastUpdate <= THRESHOLD && data.status === "inactive") {
           await doc.ref.update({ status: "active" });
           console.log(`${doc.id} → ACTIVE`);
         }
