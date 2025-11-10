@@ -1,52 +1,68 @@
+// ===============================
+// 🌊 Flood Logs - Generate Report (Fixed All Sensors)
+// ===============================
+
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 
 export const handleGenerateReport = (filteredLogs, startDate, endDate) => {
-  if (filteredLogs.length === 0) {
+  if (!filteredLogs || filteredLogs.length === 0) {
     alert("No logs available to export!");
     return;
   }
 
+  // --- Group logs by normalized sensor name ---
   const grouped = {};
   filteredLogs.forEach((log) => {
-    const key = log.sensorName || "Unknown Sensor";
-    if (!grouped[key]) grouped[key] = [];
-    grouped[key].push(log);
+    const originalName = log.sensorName || "Unknown Sensor";
+    const key = originalName.trim().toLowerCase(); // normalize for grouping
+    if (!grouped[key]) {
+      grouped[key] = { name: originalName.trim(), logs: [] };
+    }
+    grouped[key].logs.push(log);
   });
 
+  // --- Create workbook ---
   const wb = XLSX.utils.book_new();
 
-  Object.keys(grouped).forEach((sensorName) => {
-    const logsForSensor = grouped[sensorName];
-    const distances = logsForSensor.map((l) => l.distance || 0);
+  // --- Sort sensors alphabetically (Sensor01, Sensor02, etc.) ---
+  const sortedSensors = Object.values(grouped).sort((a, b) =>
+    a.name.localeCompare(b.name, undefined, { numeric: true })
+  );
+
+  // --- Create one sheet per sensor ---
+  sortedSensors.forEach((group) => {
+    const { name: sensorName, logs } = group;
+    const distances = logs.map((l) => l.distance || 0);
     const avgDistance = distances.reduce((a, b) => a + b, 0) / distances.length;
     const maxDistance = Math.max(...distances);
     const minDistance = Math.min(...distances);
-    const peakLog = logsForSensor.find((l) => l.distance === maxDistance);
+    const peakLog = logs.find((l) => l.distance === maxDistance);
     const peakTime = peakLog ? new Date(peakLog.timestamp).toLocaleString("en-PH") : "N/A";
 
-    const floodEvents = logsForSensor.filter(
+    const floodEvents = logs.filter(
       (l) =>
         l.status?.toLowerCase().includes("elevated") ||
         l.status?.toLowerCase().includes("critical") ||
         l.status?.toLowerCase().includes("flood")
     ).length;
 
-    const avgFloodRate = ((floodEvents / logsForSensor.length) * 100).toFixed(2);
+    const avgFloodRate = ((floodEvents / logs.length) * 100).toFixed(2);
 
     const statusCount = {};
-    logsForSensor.forEach((l) => {
+    logs.forEach((l) => {
       const s = l.status || "Unknown";
       statusCount[s] = (statusCount[s] || 0) + 1;
     });
+
     const statusSummary = Object.entries(statusCount)
-      .map(([k, v]) => `${k}: ${((v / logsForSensor.length) * 100).toFixed(1)}%`)
+      .map(([k, v]) => `${k}: ${((v / logs.length) * 100).toFixed(1)}%`)
       .join(", ");
 
     const summary = [
       ["📘 Sensor Summary Report"],
       ["Sensor Name:", sensorName],
-      ["Location:", logsForSensor[0]?.location || "N/A"],
+      ["Location:", logs[0]?.location || "N/A"],
       ["Date Range:", `${startDate || "All"} to ${endDate || "All"}`],
       ["Average Water Level (cm):", avgDistance.toFixed(2)],
       ["Average Flood Rate (%):", `${avgFloodRate}%`],
@@ -59,7 +75,7 @@ export const handleGenerateReport = (filteredLogs, startDate, endDate) => {
       ["Timestamp", "Sensor", "Location", "Distance (cm)", "Status", "Type"],
     ];
 
-    const tableData = logsForSensor.map((log) => [
+    const tableData = logs.map((log) => [
       new Date(log.timestamp).toLocaleString("en-PH"),
       log.sensorName,
       log.location,
@@ -70,10 +86,16 @@ export const handleGenerateReport = (filteredLogs, startDate, endDate) => {
 
     const sheetData = [...summary, ...tableData];
     const ws = XLSX.utils.aoa_to_sheet(sheetData);
-    XLSX.utils.book_append_sheet(wb, ws, sensorName.substring(0, 31));
+
+    // Use readable name, limit to 31 chars (Excel limit)
+    const safeName = sensorName.replace(/[\\/?*[\]:]/g, "").substring(0, 31);
+    XLSX.utils.book_append_sheet(wb, ws, safeName);
   });
 
+  // --- Save workbook ---
+  const date = new Date().toISOString().slice(0, 10);
   const wbout = XLSX.write(wb, { type: "array", bookType: "xlsx" });
-  const filename = `Flood_Report_${new Date().toISOString().slice(0, 10)}.xlsx`;
+  const filename = `Flood_Report_${date}.xlsx`;
+
   saveAs(new Blob([wbout], { type: "application/octet-stream" }), filename);
 };

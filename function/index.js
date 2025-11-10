@@ -64,6 +64,11 @@ async function sendSemaphoreSMS(apiKey, number, message, senderName) {
 // Flood Status Helper
 // --------------------
 function getStatus(distance, device = {}) {
+  // Ensure thresholds are numbers, default in meters
+  const normal = Number(device.normalLevel) || 0;
+  const alert = Number(device.alertLevel) || 2;
+  const max = Number(device.maxHeight) || 4;
+
   if (distance >= max) return "Critical";
   if (distance >= alert) return "Elevated";
   return "Normal";
@@ -84,16 +89,15 @@ exports.sendFloodAlertSMS = onCall(
     try {
       const deviceDoc = await firestoreDb.collection("devices").doc(sensorName).get();
       if (!deviceDoc.exists) throw new HttpsError("not-found", "Device not found");
-      const device = deviceDoc.data();
+      const device = deviceDoc.data() || {};
 
-      // Use manual distance or fetch from Realtime DB
       let distance;
       if (manualDistance !== undefined) {
         distance = Number(manualDistance);
       } else {
         const snapshot = await rtdb.ref(`realtime/${sensorName}/distance`).get();
         if (!snapshot.exists()) throw new HttpsError("not-found", "No distance found in Realtime DB");
-        distance = Number(snapshot.val());
+        distance = Number(snapshot.val()) || 0;
       }
 
       const roundedDistance = Math.round(distance);
@@ -120,7 +124,6 @@ Time: ${new Date().toLocaleString("en-PH", { timeZone: "Asia/Manila" })}
         })
       );
 
-      // Update Realtime DB
       await rtdb.ref(`alerts/${sensorName}`).set({
         alert_sent: true,
         auto_sent: false,
@@ -130,7 +133,6 @@ Time: ${new Date().toLocaleString("en-PH", { timeZone: "Asia/Manila" })}
         timestamp: Date.now(),
       });
 
-      // Log alert in Firestore
       await firestoreDb.collection("Alert_logs").add({
         type: "Manual",
         sensorName,
@@ -142,7 +144,6 @@ Time: ${new Date().toLocaleString("en-PH", { timeZone: "Asia/Manila" })}
       });
 
       return { success: true, results };
-
     } catch (err) {
       console.error("❌ Manual alert failed:", err.message);
       throw new HttpsError("internal", err.message);
@@ -151,7 +152,7 @@ Time: ${new Date().toLocaleString("en-PH", { timeZone: "Asia/Manila" })}
 );
 
 // ================================
-// Auto SMS Alert
+// Automatic SMS Alert
 // ================================
 exports.autoFloodAlert = onValueWritten(
   { ref: "/realtime/{deviceName}", region: "asia-southeast1", secrets: ["SEMAPHORE_API_KEY", "SENDER_NAME"] },
@@ -162,16 +163,13 @@ exports.autoFloodAlert = onValueWritten(
 
     const firestoreDb = getFirestoreDb();
     const rtdb = getRtdb();
-    const apiKey = SEMAPHORE_API_KEY;
-
-    const distance = Number(newData.distance);
+    const distance = Number(newData.distance) || 0;
     const roundedDistance = Math.round(distance);
 
     try {
       const deviceDoc = await firestoreDb.collection("devices").doc(deviceName).get();
       if (!deviceDoc.exists) return;
-      const device = deviceDoc.data();
-
+      const device = deviceDoc.data() || {};
       if (device.status === "inactive") return;
 
       const status = getStatus(distance, device);
@@ -206,11 +204,10 @@ Time: ${new Date().toLocaleString("en-PH", { timeZone: "Asia/Manila" })}
           const person = doc.data();
           const number = formatNumber(person.Phone_number);
           if (!number) return;
-          await sendSemaphoreSMS(apiKey, number, message, SENDER_NAME);
+          await sendSemaphoreSMS(SEMAPHORE_API_KEY, number, message, SENDER_NAME);
         })
       );
 
-      // Update Realtime DB
       await rtdb.ref(`alerts/${deviceName}`).set({
         alert_sent: true,
         auto_sent: true,
@@ -220,7 +217,6 @@ Time: ${new Date().toLocaleString("en-PH", { timeZone: "Asia/Manila" })}
         timestamp: Date.now(),
       });
 
-      // Log alert in Firestore
       await firestoreDb.collection("Alert_logs").add({
         type: "Automatic",
         sensorName,
@@ -231,7 +227,6 @@ Time: ${new Date().toLocaleString("en-PH", { timeZone: "Asia/Manila" })}
         message,
       });
 
-      // Update device counter
       await firestoreDb.collection("devices").doc(deviceName).update({
         lastAutoSmsSent: FieldValue.serverTimestamp(),
         autoSmsCountToday: currentCount + 1,
@@ -239,7 +234,6 @@ Time: ${new Date().toLocaleString("en-PH", { timeZone: "Asia/Manila" })}
       });
 
       console.log(`✅ Automatic alert sent for ${deviceName}`);
-
     } catch (err) {
       console.error("❌ Auto alert failed:", err.message);
     }
