@@ -7,6 +7,7 @@
   padding: 20px;
   background: #011627;
   height: 8vh;
+  z-index: 1000;
   display: flex;
   justify-content: space-between; /* space out hamburger, title, login */
   align-items: flex-start;        /* align everything to the top */

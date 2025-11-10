@@ -89,7 +89,7 @@ body {
 }
 .devices_contents2 svg, .contactsettings_contents2 svg, .logs_contents2 svg  {
   font-size: 2rem;
-  margin: 1rem 1rem 1rem 6rem;
+  margin: 1rem 1rem 1rem 5rem;
   align-items: center;
 }
 
@@ -508,22 +508,6 @@ body {
   transition: background-color .3s ease;
 }
 
-.logs-list {
-  margin: 2rem auto;
-  width: 100%;
-  max-width: 90rem;
-  background: rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(12px);
-  border-radius: 16px;
-  padding: 1.5rem;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
-  border: 1px solid rgba(10, 10, 10, 0.3);
-}
-
-.logs-list p{
-  color: #000000ff;
-  text-align: center;
-}
 .locked-input {
   color: #555;            /* faded/dimmed black */
   background-color: #f5f5f5;
@@ -695,9 +679,9 @@ body {
 
 /* Container for logs table - same style as contacts-table-container */
 .logs-contents-container {
-  margin: 3rem auto;
+  margin: 2rem auto;
   width: 100%;
-  max-width: 90rem;
+  max-width: 80rem;
   background: rgba(255, 255, 255, 0.2);
   backdrop-filter: blur(12px);
   border-radius: 16px;
@@ -735,7 +719,7 @@ body {
 
 
 /* Empty message */
-.no-logsogs-msg {
+.no-logs-msg {
   text-align: center;
   color: #000;
   margin-top: 20px;
