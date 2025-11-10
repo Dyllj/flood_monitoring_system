@@ -65,12 +65,12 @@ async function sendSemaphoreSMS(apiKey, number, message, senderName) {
 // Flood Status Helper
 // --------------------
 function getStatus(distance, device = {}) {
-  const normal = Number(device.normalLevel) || 0;
-  const alert = Number(device.alertLevel) || 2;
-  const max = Number(device.maxHeight) || 4;
+  const normalLevel = Number(device.normalLevel) || 0;
+  const alertLevel = Number(device.alertLevel) || 2;
+  const maxHeight = Number(device.maxHeight) || 4;
 
-  if (distance >= max) return "Critical";
-  if (distance >= alert) return "Elevated";
+  if (distance >= maxHeight) return "Critical";
+  if (distance >= alertLevel) return "Elevated";
   return "Normal";
 }
 
@@ -146,9 +146,12 @@ Time: ${new Date().toLocaleString("en-PH", { timeZone: "Asia/Manila" })}
       });
 
       // Update device with waterLevelStatus and lastUpdate
+      const alertLevel = Number(device.alertLevel) || 2;
+      const maxHeight = Number(device.maxHeight) || 4;
+
       let waterLevelStatus = "Normal";
-      if (distance >= Number(device.alertLevel)) waterLevelStatus = "Elevated";
-      if (distance >= Number(device.maxHeight)) waterLevelStatus = "Critical";
+      if (distance >= alertLevel) waterLevelStatus = "Elevated";
+      if (distance >= maxHeight) waterLevelStatus = "Critical";
 
       await firestoreDb.collection("devices").doc(sensorName).update({
         lastUpdate: FieldValue.serverTimestamp(),
@@ -184,11 +187,15 @@ exports.autoFloodAlert = onValueWritten(
       if (!deviceDoc.exists) return;
       const device = deviceDoc.data() || {};
 
-      // Update waterLevelStatus and lastUpdate first
-      let waterLevelStatus = "Normal";
-      if (distance >= Number(device.alertLevel)) waterLevelStatus = "Elevated";
-      if (distance >= Number(device.maxHeight)) waterLevelStatus = "Critical";
+      const alertLevel = Number(device.alertLevel) || 2;
+      const maxHeight = Number(device.maxHeight) || 4;
 
+      // Compute waterLevelStatus based on latest reading
+      let waterLevelStatus = "Normal";
+      if (distance >= alertLevel) waterLevelStatus = "Elevated";
+      if (distance >= maxHeight) waterLevelStatus = "Critical";
+
+      // Update device immediately with latest status
       await firestoreDb.collection("devices").doc(deviceName).update({
         lastUpdate: FieldValue.serverTimestamp(),
         waterLevelStatus,
