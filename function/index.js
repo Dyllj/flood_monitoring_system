@@ -6,6 +6,7 @@
 
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { onValueWritten } = require("firebase-functions/v2/database");
+const { onSchedule } = require("firebase-functions/v2/scheduler");
 const admin = require("firebase-admin");
 const { FieldValue } = require("firebase-admin/firestore");
 const axios = require("axios");
@@ -102,6 +103,8 @@ exports.sendFloodAlertSMS = onCall(
 
       const roundedDistance = Math.round(distance);
       const status = getStatus(distance, device);
+      if (status !== "Critical") return;
+      
       const location = manualLocation || device.location || "Unknown";
 
       const message = `MANUAL FLOOD ALERT
@@ -236,6 +239,40 @@ Time: ${new Date().toLocaleString("en-PH", { timeZone: "Asia/Manila" })}
       console.log(`✅ Automatic alert sent for ${deviceName}`);
     } catch (err) {
       console.error("❌ Auto alert failed:", err.message);
+    }
+  }
+);
+// ================================
+// DEVICE STATUS AUTO TOGGLE
+// Automatically sets devices to "inactive" if no new data for 3 hours
+// and back to "active" if new data comes in
+// ================================
+exports.checkDeviceActivity = onSchedule(
+  { schedule: "every 2 minutes", region: "asia-southeast1" }, // runs every hour
+  async () => {
+    const firestoreDb = getFirestoreDb();
+    const now = Date.now();
+    const THRESHOLD = 2 * 60 * 1000; // 2 minutes in milliseconds
+
+    try {
+      const devices = await firestoreDb.collection("devices").get();
+      for (const doc of devices.docs) {
+        const data = doc.data();
+        const lastUpdate = data.lastDataUpdate?.toMillis?.() || 0;
+
+        // If no data for 3+ hours and status not already inactive
+        if (now - lastUpdate > THRESHOLD && data.status !== "inactive") {
+          await doc.ref.update({ status: "inactive" });
+          console.log(`${doc.id} → INACTIVE`);
+        }
+        // If new data received within 3 hours and was inactive
+        else if (now - lastUpdate <= THRESHOLD && data.status === "inactive") {
+          await doc.ref.update({ status: "active" });
+          console.log(`${doc.id} → ACTIVE`);
+        }
+      }
+    } catch (err) {
+      console.error("❌ Device activity check failed:", err.message);
     }
   }
 );
