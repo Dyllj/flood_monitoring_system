@@ -26,6 +26,7 @@ import { getStatus } from "./Devices_contents_functions/getStatus";
 import { getColor } from "./Devices_contents_functions/getColor";
 import SmsAlertSuccess from "../../custom-notification/for-sms-alert/sms-alert-success";
 import SmsAlertFailed from "../../custom-notification/for-sms-alert/sms-alert-failed";
+import AutoSmsAlertSuccess from "../../custom-notification/for-sms-alert/AutoSmsAlertSuccess";
 import { handleSendSms } from "./Devices_contents_functions/handleSendSms";
 
 const Devices_contents = ({ isAdmin }) => {
@@ -45,6 +46,9 @@ const Devices_contents = ({ isAdmin }) => {
 
   const [showSmsAlert, setShowSmsAlert] = useState(false);
   const [showSmsAlertFailed, setShowSmsAlertFailed] = useState(false);
+
+  const [showAutoSmsAlert, setShowAutoSmsAlert] = useState(false);
+  const [autoAlertSensor, setAutoAlertSensor] = useState("");
 
   // ----------------------------
   // Firestore listener (with device status)
@@ -87,7 +91,7 @@ const Devices_contents = ({ isAdmin }) => {
           setSensorData((prev) => ({
             ...prev,
             [device.sensorName]: {
-              distance: data.distance, // in meters
+              distance: data.distance,
               timestamp: data.timestamp,
               status: prev[device.sensorName]?.status || "inactive",
             },
@@ -98,12 +102,19 @@ const Devices_contents = ({ isAdmin }) => {
             const prevData = prev[device.sensorName] || [];
             const newPoint = {
               time: new Date().toLocaleTimeString(),
-              value: data.distance, // meters (removed * 100)
+              value: data.distance,
             };
             const updated = [...prevData, newPoint];
             if (updated.length > 30) updated.shift();
             return { ...prev, [device.sensorName]: updated };
           });
+
+          // Example automatic alert logic
+          if (data.distance >= (device.alertLevel || 4)) {
+            setAutoAlertSensor(device.sensorName);
+            setShowAutoSmsAlert(true);
+            setTimeout(() => setShowAutoSmsAlert(false), 4000);
+          }
         }
       });
 
@@ -151,6 +162,12 @@ const Devices_contents = ({ isAdmin }) => {
     <>
       {showSmsAlert && <SmsAlertSuccess />}
       {showSmsAlertFailed && <SmsAlertFailed />}
+      {showAutoSmsAlert && (
+        <AutoSmsAlertSuccess
+          sensorName={autoAlertSensor}
+          onClose={() => setShowAutoSmsAlert(false)}
+        />
+      )}
 
       <div className="devices-contents"></div>
 
@@ -216,7 +233,7 @@ const Devices_contents = ({ isAdmin }) => {
                           try {
                             await handleSendSms(device.sensorName);
                             setShowSmsAlert(true);
-                            setTimeout(() => setShowSmsAlert(false), 4000); // auto-hide after 4s
+                            setTimeout(() => setShowSmsAlert(false), 4000);
                           } catch (err) {
                             console.log(err);
                             setShowSmsAlertFailed(true);
@@ -226,8 +243,6 @@ const Devices_contents = ({ isAdmin }) => {
                       >
                         <MdOutlineNotificationsActive />
                       </button>
-
-
 
                       {/* ⚙️ Edit */}
                       <button
@@ -301,7 +316,7 @@ const Devices_contents = ({ isAdmin }) => {
               <div className="waterlevel-chart-container">
                 <ResponsiveContainer>
                   <AreaChart data={chartData}>
-                    <XAxis dataKey="time"/>
+                    <XAxis dataKey="time" />
                     <YAxis domain={[0, maxHeight]} />
                     <CartesianGrid stroke="rgba(16,16,16,0.5)" />
 
@@ -313,11 +328,7 @@ const Devices_contents = ({ isAdmin }) => {
                         x2="0"
                         y2="1"
                       >
-                        <stop
-                          offset="0%"
-                          stopColor={color}
-                          stopOpacity={0.6}
-                        >
+                        <stop offset="0%" stopColor={color} stopOpacity={0.6}>
                           <animate
                             attributeName="stopColor"
                             values={`${color};${color}`}
@@ -325,11 +336,7 @@ const Devices_contents = ({ isAdmin }) => {
                             fill="freeze"
                           />
                         </stop>
-                        <stop
-                          offset="100%"
-                          stopColor={color}
-                          stopOpacity={0.1}
-                        >
+                        <stop offset="100%" stopColor={color} stopOpacity={0.1}>
                           <animate
                             attributeName="stopColor"
                             values={`${color};${color}`}
@@ -341,13 +348,13 @@ const Devices_contents = ({ isAdmin }) => {
                     </defs>
 
                     <Area
-                      type="natural"
+                      type="monotone"
                       dataKey="value"
                       stroke={color}
                       fill={`url(#waterColor-${device.id})`}
                       strokeWidth={2}
                       dot={false}
-                      isAnimationActive
+                      isAnimationActive={true}
                       className="waterlevel-area"
                     />
                   </AreaChart>
