@@ -30,7 +30,6 @@ import { getStatus } from "./Devices_contents_functions/getStatus";
 import { getColor } from "./Devices_contents_functions/getColor";
 import SmsAlertSuccess from "../../custom-notification/for-sms-alert/sms-alert-success";
 import SmsAlertFailed from "../../custom-notification/for-sms-alert/sms-alert-failed";
-import AutoSmsAlertSuccess from "../../custom-notification/for-sms-alert/auto-sms-alert-success";
 import { handleSendSms } from "./Devices_contents_functions/handleSendSms";
 
 import HistoricalDataModal from "../Devices_contents/device-logs/HistoricalDataModal.jsx"; // 🔹 import
@@ -51,8 +50,6 @@ const Devices_contents = ({ isAdmin }) => {
   });
   const [showSmsAlert, setShowSmsAlert] = useState(false);
   const [showSmsAlertFailed, setShowSmsAlertFailed] = useState(false);
-  const [showAutoSmsAlert, setShowAutoSmsAlert] = useState(false);
-  const [autoAlertSensor, setAutoAlertSensor] = useState("");
 
   // 🔹 New state for historical modal
   const [historicalModalSensor, setHistoricalModalSensor] = useState(null);
@@ -113,12 +110,6 @@ const Devices_contents = ({ isAdmin }) => {
             if (updated.length > 30) updated.shift();
             return { ...prev, [device.sensorName]: updated };
           });
-
-          if (data.distance >= (device.alertLevel || 4)) {
-            setAutoAlertSensor(device.sensorName);
-            setShowAutoSmsAlert(true);
-            setTimeout(() => setShowAutoSmsAlert(false), 4000);
-          }
         }
       });
 
@@ -157,12 +148,6 @@ const Devices_contents = ({ isAdmin }) => {
     <>
       {showSmsAlert && <SmsAlertSuccess />}
       {showSmsAlertFailed && <SmsAlertFailed />}
-      {showAutoSmsAlert && (
-        <AutoSmsAlertSuccess
-          sensorName={autoAlertSensor}
-          onClose={() => setShowAutoSmsAlert(false)}
-        />
-      )}
 
       <div className="devices-contents"></div>
 
@@ -296,7 +281,7 @@ const Devices_contents = ({ isAdmin }) => {
               </div>
 
               <div className="alert-row">
-                <strong>⚠️ Alert Level:</strong> {alertLevel} m
+                <strong>Alert Level:</strong> {alertLevel} m
               </div>
 
               <div className="waterlevel-chart-container">
