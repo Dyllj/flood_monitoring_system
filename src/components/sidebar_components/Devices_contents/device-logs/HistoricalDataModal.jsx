@@ -146,8 +146,8 @@ const HistoricalDataModal = ({ sensorId, onClose }) => {
 
         {/* Filter modal */}
         {filterOpen && (
-          <div className="filter-modal-overlay" onClick={() => setFilterOpen(false)}>
-            <div className="filter-modal-container" onClick={(e) => e.stopPropagation()}>
+          <div className="filter-modal-overlay" id="history-filter-overlay" onClick={() => setFilterOpen(false)}>
+            <div className="filter-modal-container" id="history-filter-container" onClick={(e) => e.stopPropagation()}>
               <h3>Filter Historical Data</h3>
               <label>
                 Start Date & Time:
@@ -165,8 +165,10 @@ const HistoricalDataModal = ({ sensorId, onClose }) => {
                   onChange={(e) => setFilterEnd(e.target.value)}
                 />
               </label>
-              <button onClick={applyFilter}>Apply Filter</button>
-              <button onClick={() => setFilterOpen(false)}>Cancel</button>
+              <div className="history-filter">
+                  <button id="apply-filter" onClick={applyFilter}>Apply Filter</button>
+                  <button id="cancel-filter" onClick={() => setFilterOpen(false)}>Cancel</button>
+              </div>
             </div>
           </div>
         )}
