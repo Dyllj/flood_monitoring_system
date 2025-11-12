@@ -288,7 +288,7 @@ exports.checkDeviceActivity = onSchedule(
     try {
       const devices = await firestoreDb.collection("devices").get();
       for (const doc of devices.docs) {
-        const data = doc.data();
+        const data = doc.data();  
         const lastUpdate = data.lastUpdate?.toMillis?.() || 0;
 
         if (now - lastUpdate > THRESHOLD && data.status !== "inactive") {
@@ -301,6 +301,49 @@ exports.checkDeviceActivity = onSchedule(
       }
     } catch (err) {
       console.error("❌ Device activity check failed:", err.message);
+    }
+  }
+);
+
+// ================================
+// 🔄 DEVICE READINGS LOGGER
+// Logs every reading update to Firestore /devices-logs for history tracking
+// ================================
+exports.logDeviceReadings = onValueWritten(
+  { ref: "/realtime/{sensorId}", region: "asia-southeast1" },
+  async (event) => {
+    const sensorId = event.params.sensorId;
+    const newData = event.data.after.val();
+    if (!newData || newData.distance === undefined) return;
+
+    const firestoreDb = getFirestoreDb();
+    const distance = Number(newData.distance);
+    const roundedDistance = Math.round(distance);
+
+    try {
+      const deviceRef = firestoreDb.collection("devices").doc(sensorId);
+      const deviceDoc = await deviceRef.get();
+      if (!deviceDoc.exists) return;
+
+      const deviceData = deviceDoc.data();
+
+      // ✅ Log new reading under /devices-logs/{sensorId}/logs/
+      await firestoreDb
+        .collection("devices-logs")
+        .doc(sensorId)
+        .collection("logs")
+        .add({
+          lastUpdate: FieldValue.serverTimestamp(),
+          distance: roundedDistance,
+          maxHeight: deviceData.maxHeight,
+          normalLevel: deviceData.normalLevel,
+          alertLevel: deviceData.alertLevel,
+          waterLevelStatus: deviceData.waterLevelStatus,
+        });
+
+      console.log(`📊 Logged new reading for ${sensorId}`);
+    } catch (err) {
+      console.error("❌ Failed to log reading:", err.message);
     }
   }
 );
