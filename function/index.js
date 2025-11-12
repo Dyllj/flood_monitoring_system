@@ -179,24 +179,22 @@ exports.autoFloodAlert = onValueWritten(
 
     const firestoreDb = getFirestoreDb();
     const rtdb = getRtdb();
-    const distance = Number(newData.distance) || 0;
-    const roundedDistance = Math.round(distance);
+    const distance = Number(newData.distance); // keep precise float
+    const roundedDistance = Math.round(distance * 100) / 100; // for display only
 
     try {
       const deviceDoc = await firestoreDb.collection("devices").doc(deviceName).get();
       if (!deviceDoc.exists) return;
       const device = deviceDoc.data() || {};
 
-      const alertLevel = Number(device.alertLevel) || 2;
-      const maxHeight = Number(device.maxHeight) || 4;
-
-      // ✅ Apply the correct water level logic
+      // Determine waterLevelStatus using precise logic
       let waterLevelStatus = "Normal";
-      if (distance > normalLevel && distance < alertLevel) {
+      if (distance > device.normalLevel && distance < device.alertLevel) {
         waterLevelStatus = "Elevated";
-      } else if (distance >= alertLevel) {
+      } else if (distance >= device.alertLevel) {
         waterLevelStatus = "Critical";
       }
+
       // Update device immediately with latest status
       await firestoreDb.collection("devices").doc(deviceName).update({
         lastUpdate: FieldValue.serverTimestamp(),
@@ -204,7 +202,7 @@ exports.autoFloodAlert = onValueWritten(
         status: "active",
       });
 
-      const status = getStatus(distance, device);
+      const status = waterLevelStatus; // use same precise logic
       const location = device.location || "Unknown";
       const sensorName = device.sensorName || deviceName;
 
@@ -268,7 +266,7 @@ Time: ${new Date().toLocaleString("en-PH", { timeZone: "Asia/Manila" })}
         autoSmsCountDate: today,
       });
 
-      console.log(`✅ Automatic alert sent for ${deviceName}`);
+      console.log(`✅ Automatic alert sent for ${deviceName}: ${roundedDistance}m → ${status}`);
     } catch (err) {
       console.error("❌ Auto alert failed:", err.message);
     }
@@ -320,8 +318,8 @@ exports.logDeviceReadings = onValueWritten(
     if (!newData || newData.distance === undefined) return;
 
     const firestoreDb = getFirestoreDb();
-    const distance = Number(newData.distance);
-    const roundedDistance = Math.round(distance);
+    const distance = Number(newData.distance); // keep exact float
+    const roundedDistance = Math.round(distance * 100) / 100; // for display/log only
 
     try {
       const deviceRef = firestoreDb.collection("devices").doc(sensorId);
@@ -330,14 +328,11 @@ exports.logDeviceReadings = onValueWritten(
 
       const deviceData = deviceDoc.data();
 
-      // ✅ Calculate waterLevelStatus based on your logic
+      // Determine waterLevelStatus using precise logic
       let waterLevelStatus = "Normal";
-      const normalLevel = Number(deviceData.normalLevel) || 0;
-      const alertLevel = Number(deviceData.alertLevel) || 2;
-
-      if (distance > normalLevel && distance < alertLevel) {
+      if (distance > deviceData.normalLevel && distance < deviceData.alertLevel) {
         waterLevelStatus = "Elevated";
-      } else if (distance >= alertLevel) {
+      } else if (distance >= deviceData.alertLevel) {
         waterLevelStatus = "Critical";
       }
 
@@ -350,12 +345,19 @@ exports.logDeviceReadings = onValueWritten(
           lastUpdate: FieldValue.serverTimestamp(),
           distance: roundedDistance,
           maxHeight: deviceData.maxHeight,
-          normalLevel: normalLevel,
-          alertLevel: alertLevel,
-          waterLevelStatus: waterLevelStatus,
+          normalLevel: deviceData.normalLevel,
+          alertLevel: deviceData.alertLevel,
+          waterLevelStatus,
         });
 
-      console.log(`📊 Logged new reading for ${sensorId} → ${waterLevelStatus}`);
+      // Update the main device document lastUpdate and status
+      await deviceRef.update({
+        lastUpdate: FieldValue.serverTimestamp(),
+        waterLevelStatus,
+        status: "active",
+      });
+
+      console.log(`📊 Logged new reading for ${sensorId}: ${roundedDistance}m → ${waterLevelStatus}`);
     } catch (err) {
       console.error("❌ Failed to log reading:", err.message);
     }
