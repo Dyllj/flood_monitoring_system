@@ -190,11 +190,13 @@ exports.autoFloodAlert = onValueWritten(
       const alertLevel = Number(device.alertLevel) || 2;
       const maxHeight = Number(device.maxHeight) || 4;
 
-      // Compute waterLevelStatus based on latest reading
+      // ✅ Apply the correct water level logic
       let waterLevelStatus = "Normal";
-      if (distance >= alertLevel) waterLevelStatus = "Elevated";
-      if (distance >= maxHeight) waterLevelStatus = "Critical";
-
+      if (distance > normalLevel && distance < alertLevel) {
+        waterLevelStatus = "Elevated";
+      } else if (distance >= alertLevel) {
+        waterLevelStatus = "Critical";
+      }
       // Update device immediately with latest status
       await firestoreDb.collection("devices").doc(deviceName).update({
         lastUpdate: FieldValue.serverTimestamp(),
@@ -306,8 +308,9 @@ exports.checkDeviceActivity = onSchedule(
 );
 
 // ================================
-// 🔄 DEVICE READINGS LOGGER
+// 🔄 DEVICE READINGS LOGGER (Updated)
 // Logs every reading update to Firestore /devices-logs for history tracking
+// Calculates waterLevelStatus based on current reading
 // ================================
 exports.logDeviceReadings = onValueWritten(
   { ref: "/realtime/{sensorId}", region: "asia-southeast1" },
@@ -327,6 +330,17 @@ exports.logDeviceReadings = onValueWritten(
 
       const deviceData = deviceDoc.data();
 
+      // ✅ Calculate waterLevelStatus based on your logic
+      let waterLevelStatus = "Normal";
+      const normalLevel = Number(deviceData.normalLevel) || 0;
+      const alertLevel = Number(deviceData.alertLevel) || 2;
+
+      if (distance > normalLevel && distance < alertLevel) {
+        waterLevelStatus = "Elevated";
+      } else if (distance >= alertLevel) {
+        waterLevelStatus = "Critical";
+      }
+
       // ✅ Log new reading under /devices-logs/{sensorId}/logs/
       await firestoreDb
         .collection("devices-logs")
@@ -336,12 +350,12 @@ exports.logDeviceReadings = onValueWritten(
           lastUpdate: FieldValue.serverTimestamp(),
           distance: roundedDistance,
           maxHeight: deviceData.maxHeight,
-          normalLevel: deviceData.normalLevel,
-          alertLevel: deviceData.alertLevel,
-          waterLevelStatus: deviceData.waterLevelStatus,
+          normalLevel: normalLevel,
+          alertLevel: alertLevel,
+          waterLevelStatus: waterLevelStatus,
         });
 
-      console.log(`📊 Logged new reading for ${sensorId}`);
+      console.log(`📊 Logged new reading for ${sensorId} → ${waterLevelStatus}`);
     } catch (err) {
       console.error("❌ Failed to log reading:", err.message);
     }
