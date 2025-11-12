@@ -1,15 +1,19 @@
+// src/components/sidebar_components/Devices_contents/Devices_contents.jsx
+
 import { useState, useEffect } from "react";
-import "../sidebar_contents_styles.css";
 import "../../sidebar_components/sidebar_contents_styles.css";
 import { IoIosAdd } from "react-icons/io";
 import { ImLocation } from "react-icons/im";
 import { MdDeleteOutline } from "react-icons/md";
 import { IoSettingsOutline } from "react-icons/io5";
+import { LuChevronsLeftRight } from "react-icons/lu";
 import { MdOutlineNotificationsActive } from "react-icons/md";
-import AddDevice from "../../add-forms/Add-device";
+
+import AddDevice from "../../add-forms/Add-device.jsx";
 import { db, realtimeDB } from "../../../auth/firebase_auth";
 import { collection, onSnapshot } from "firebase/firestore";
 import { ref, onValue, off } from "firebase/database";
+
 import {
   AreaChart,
   Area,
@@ -26,8 +30,10 @@ import { getStatus } from "./Devices_contents_functions/getStatus";
 import { getColor } from "./Devices_contents_functions/getColor";
 import SmsAlertSuccess from "../../custom-notification/for-sms-alert/sms-alert-success";
 import SmsAlertFailed from "../../custom-notification/for-sms-alert/sms-alert-failed";
-import AutoSmsAlertSuccess from "../../custom-notification/for-sms-alert/AutoSmsAlertSuccess";
+import AutoSmsAlertSuccess from "../../custom-notification/for-sms-alert/auto-sms-alert-success";
 import { handleSendSms } from "./Devices_contents_functions/handleSendSms";
+
+import HistoricalDataModal from "../Devices_contents/device-logs/HistoricalDataModal.jsx"; // 🔹 import
 
 const Devices_contents = ({ isAdmin }) => {
   const [showAddDevice, setShowAddDevice] = useState(false);
@@ -43,15 +49,16 @@ const Devices_contents = ({ isAdmin }) => {
     normalLevel: "",
     alertLevel: "",
   });
-
   const [showSmsAlert, setShowSmsAlert] = useState(false);
   const [showSmsAlertFailed, setShowSmsAlertFailed] = useState(false);
-
   const [showAutoSmsAlert, setShowAutoSmsAlert] = useState(false);
   const [autoAlertSensor, setAutoAlertSensor] = useState("");
 
+  // 🔹 New state for historical modal
+  const [historicalModalSensor, setHistoricalModalSensor] = useState(null);
+
   // ----------------------------
-  // Firestore listener (with device status)
+  // Firestore listener (devices)
   // ----------------------------
   useEffect(() => {
     const unsub = onSnapshot(collection(db, "devices"), (snapshot) => {
@@ -61,7 +68,6 @@ const Devices_contents = ({ isAdmin }) => {
       );
       setDevices(updatedDevices);
 
-      // 🔹 Extract active/inactive status for dots
       snapshot.forEach((doc) => {
         const device = doc.data();
         setSensorData((prev) => ({
@@ -78,7 +84,7 @@ const Devices_contents = ({ isAdmin }) => {
   }, []);
 
   // ----------------------------
-  // Realtime DB listener for distance readings (in meters)
+  // Realtime DB listener
   // ----------------------------
   useEffect(() => {
     const listeners = [];
@@ -97,7 +103,6 @@ const Devices_contents = ({ isAdmin }) => {
             },
           }));
 
-          // Add chart data (using meters)
           setChartHistory((prev) => {
             const prevData = prev[device.sensorName] || [];
             const newPoint = {
@@ -109,7 +114,6 @@ const Devices_contents = ({ isAdmin }) => {
             return { ...prev, [device.sensorName]: updated };
           });
 
-          // Example automatic alert logic
           if (data.distance >= (device.alertLevel || 4)) {
             setAutoAlertSensor(device.sensorName);
             setShowAutoSmsAlert(true);
@@ -124,9 +128,6 @@ const Devices_contents = ({ isAdmin }) => {
     return () => listeners.forEach((unsub) => unsub());
   }, [devices]);
 
-  // ----------------------------
-  // Tooltip for non-editable sensor name
-  // ----------------------------
   const addSensorTooltip = () => {
     const parent = document.querySelector(".sensor-label");
     if (!parent || parent.querySelector(".input-tooltip")) return;
@@ -142,9 +143,6 @@ const Devices_contents = ({ isAdmin }) => {
     if (tooltip) tooltip.remove();
   };
 
-  // ----------------------------
-  // Wrapper for edit (kept in meters)
-  // ----------------------------
   const handleEditWrapper = (device) => {
     const deviceInMeters = {
       ...device,
@@ -155,9 +153,6 @@ const Devices_contents = ({ isAdmin }) => {
     handleEdit(deviceInMeters, setEditingDevice, setEditData);
   };
 
-  // ----------------------------
-  // Main UI
-  // ----------------------------
   return (
     <>
       {showSmsAlert && <SmsAlertSuccess />}
@@ -187,15 +182,13 @@ const Devices_contents = ({ isAdmin }) => {
         )}
       </div>
 
-      {/* DEVICE CARDS */}
       <div className="devices-grid">
         {devices.map((device) => {
           const reading = sensorData[device.sensorName] || {};
-          const distance = parseFloat(reading.distance) || 0; // meters
+          const distance = parseFloat(reading.distance) || 0;
           const maxHeight = device.maxHeight || 6;
           const normalLevel = device.normalLevel || 2;
           const alertLevel = device.alertLevel || 4;
-
           const status = getStatus(distance, normalLevel, alertLevel);
           const color = getColor(distance, normalLevel, alertLevel);
           const chartData = chartHistory[device.sensorName] || [];
@@ -204,7 +197,6 @@ const Devices_contents = ({ isAdmin }) => {
 
           return (
             <div key={device.id} className="device-card shadow">
-              {/* Header */}
               <div className="device-header">
                 <h3>
                   <span
@@ -226,7 +218,6 @@ const Devices_contents = ({ isAdmin }) => {
 
                   {isAdmin && (
                     <>
-                      {/* 🔔 Send SMS Alert */}
                       <button
                         className="notify-btn"
                         onClick={async () => {
@@ -244,7 +235,6 @@ const Devices_contents = ({ isAdmin }) => {
                         <MdOutlineNotificationsActive />
                       </button>
 
-                      {/* ⚙️ Edit */}
                       <button
                         className="edit-btn"
                         onClick={() => handleEditWrapper(device)}
@@ -252,7 +242,6 @@ const Devices_contents = ({ isAdmin }) => {
                         <IoSettingsOutline />
                       </button>
 
-                      {/* 🗑️ Delete */}
                       <button
                         className="delete-btn"
                         onClick={() => handleDelete(device.id)}
@@ -264,7 +253,6 @@ const Devices_contents = ({ isAdmin }) => {
                 </div>
               </div>
 
-              {/* Info Section */}
               <div className="device-meta">
                 <p>
                   <strong>Location:</strong> {device.location || "Unknown"}
@@ -286,7 +274,6 @@ const Devices_contents = ({ isAdmin }) => {
                 Current Level: <b>{distance.toFixed(2)} m</b> / {maxHeight} m
               </p>
 
-              {/* Progress Bar */}
               <div className="progress-container">
                 <div
                   className="progress-bar"
@@ -312,14 +299,12 @@ const Devices_contents = ({ isAdmin }) => {
                 <strong>⚠️ Alert Level:</strong> {alertLevel} m
               </div>
 
-              {/* Chart */}
               <div className="waterlevel-chart-container">
                 <ResponsiveContainer>
                   <AreaChart data={chartData}>
                     <XAxis dataKey="time" />
                     <YAxis domain={[0, maxHeight]} />
                     <CartesianGrid stroke="rgba(16,16,16,0.5)" />
-
                     <defs>
                       <linearGradient
                         id={`waterColor-${device.id}`}
@@ -328,25 +313,10 @@ const Devices_contents = ({ isAdmin }) => {
                         x2="0"
                         y2="1"
                       >
-                        <stop offset="0%" stopColor={color} stopOpacity={0.6}>
-                          <animate
-                            attributeName="stopColor"
-                            values={`${color};${color}`}
-                            dur="1.2s"
-                            fill="freeze"
-                          />
-                        </stop>
-                        <stop offset="100%" stopColor={color} stopOpacity={0.1}>
-                          <animate
-                            attributeName="stopColor"
-                            values={`${color};${color}`}
-                            dur="1.2s"
-                            fill="freeze"
-                          />
-                        </stop>
+                        <stop offset="0%" stopColor={color} stopOpacity={0.6} />
+                        <stop offset="100%" stopColor={color} stopOpacity={0.1} />
                       </linearGradient>
                     </defs>
-
                     <Area
                       type="monotone"
                       dataKey="value"
@@ -359,11 +329,25 @@ const Devices_contents = ({ isAdmin }) => {
                     />
                   </AreaChart>
                 </ResponsiveContainer>
+
+                {/* 🔹 Historical Data Icon */}
+                <LuChevronsLeftRight
+                  className="chart-toggle-icon"
+                  onClick={() => setHistoricalModalSensor(device.sensorName)}
+                />
               </div>
             </div>
           );
         })}
       </div>
+
+      {/* 🔹 Historical Data Modal */}
+      {historicalModalSensor && (
+        <HistoricalDataModal
+          sensorId={historicalModalSensor}
+          onClose={() => setHistoricalModalSensor(null)}
+        />
+      )}
 
       {/* Edit Modal */}
       {editingDevice && (
