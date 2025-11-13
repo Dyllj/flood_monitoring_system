@@ -139,7 +139,7 @@ const HistoricalDataModal = ({ sensorId, onClose }) => {
                 strokeDasharray="3 3"
                 label={{ value: "Alert Level", position: "top", fill: "#ff7300", fontSize: 12 }}
               />
-              <Area type="monotone" dataKey="distance" stroke="#061694ff" strokeWidth={5} fill="none" name="Water Distance (m)" style={{ pointerEvents: "none" }}/>
+              <Area type="monotone" dataKey="distance" stroke="#061694ff" strokeWidth={5} fill="none" name="Water Distance (m)" />
             </AreaChart>
           </ResponsiveContainer>
         )}
