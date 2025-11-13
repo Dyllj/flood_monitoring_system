@@ -1,0 +1,68 @@
+ESP8266/senderNode Code
+
+
+
+
+#include <SPI.h>
+#include <LoRa.h>
+
+#define TRIG_PIN 5
+#define ECHO_PIN 2
+#define LORA_CS  15
+#define LORA_RST 16
+#define LORA_IRQ 4
+
+const char* SENSOR_ID = "sensor01";
+const byte  SYNC_WORD  = 0x11;
+
+// --- Mounting height of ultrasonic sensor in meters ---
+const float MAX_DISTANCE_M = 6.0;  // 6 meters from sensor to riverbed
+
+void setup() {
+  Serial.begin(115200);
+  pinMode(TRIG_PIN, OUTPUT);
+  pinMode(ECHO_PIN, INPUT);
+
+  SPI.begin();
+  LoRa.setPins(LORA_CS, LORA_RST, LORA_IRQ);
+
+  if (!LoRa.begin(433E6)) {
+    Serial.println("LoRa init failed!");
+    while (true);
+  }
+
+  LoRa.setSyncWord(SYNC_WORD);
+  Serial.printf("LoRa SensorNode [%s] ready (SyncWord: 0x%X)\n", SENSOR_ID, SYNC_WORD);
+}
+
+void loop() {
+  // --- Trigger ultrasonic pulse ---
+  digitalWrite(TRIG_PIN, LOW); delayMicroseconds(2);
+  digitalWrite(TRIG_PIN, HIGH); delayMicroseconds(10);
+  digitalWrite(TRIG_PIN, LOW);
+
+  // --- Measure echo duration ---
+  long duration = pulseIn(ECHO_PIN, HIGH, 35000UL);  // 6 m range
+
+  // --- Convert duration to raw distance (in meters) ---
+  float rawDistance = (duration * 0.0343f / 2.0f) / 100.0f;  // convert cm → m
+
+  // Cap distance to sensor height
+  if (rawDistance > MAX_DISTANCE_M) rawDistance = MAX_DISTANCE_M;
+
+  // --- Compute water level ---
+  float distance = MAX_DISTANCE_M - rawDistance;  // still named 'distance' for compatibility
+
+  // --- Transmit data ---
+  LoRa.beginPacket();
+  LoRa.print(SENSOR_ID);
+  LoRa.print(",");
+  LoRa.print(distance, 2);  // 2 decimal places for meters
+  LoRa.endPacket();
+
+  // --- Debug info ---
+  Serial.printf("[%s] RawDist: %.2f m | WaterLevel(sent as distance): %.2f m\n",
+                SENSOR_ID, rawDistance, distance);
+
+  delay(2000);
+}

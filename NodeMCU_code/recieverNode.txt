@@ -1,0 +1,90 @@
+ESP32/recieverNode Code
+
+
+
+
+#include <SPI.h>
+#include <LoRa.h>
+#include <WiFi.h>
+#include <Firebase_ESP_Client.h>
+#include "addons/TokenHelper.h"
+#include "addons/RTDBHelper.h"
+
+#define WIFI_SSID     "Vince"
+#define WIFI_PASSWORD "password"
+#define API_KEY       "AIzaSyCf_2aqCvVuW1IxE5PEP2OsDonxKE13m5A"
+#define DATABASE_URL  "https://floodmonitor-292dc-default-rtdb.asia-southeast1.firebasedatabase.app/"
+#define USER_EMAIL    "molave.mdrrmo@gmail.com"
+#define USER_PASSWORD "molaveMDRRMO"
+
+const char* GATEWAY_ID = "sensor01";
+const byte  SYNC_WORD  = 0x11;
+
+FirebaseData   fbdo;
+FirebaseAuth   auth;
+FirebaseConfig config;
+
+#define LORA_CS  5
+#define LORA_RST 14
+#define LORA_IRQ 26
+
+void setup() {
+  Serial.begin(115200);
+
+  SPI.begin(18, 19, 23);
+  LoRa.setPins(LORA_CS, LORA_RST, LORA_IRQ);
+
+  if (!LoRa.begin(433E6)) {
+    Serial.println("LoRa init failed!");
+    while (1);
+  }
+
+  LoRa.setSyncWord(SYNC_WORD);
+  Serial.printf("LoRa Gateway [%s] ready (SyncWord: 0x%X)\n", GATEWAY_ID, SYNC_WORD);
+
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("\nWiFi connected");
+
+  config.api_key       = API_KEY;
+  config.database_url  = DATABASE_URL;
+  auth.user.email      = USER_EMAIL;
+  auth.user.password   = USER_PASSWORD;
+
+  Firebase.reconnectWiFi(true);
+  Firebase.begin(&config, &auth);
+
+  Serial.printf("Gateway %s connected to Firebase\n", GATEWAY_ID);
+}
+
+void loop() {
+  int packetSize = LoRa.parsePacket();
+  if (packetSize) {
+    String payload = LoRa.readString();
+    Serial.printf("Raw packet: %s\n", payload.c_str());
+
+    int commaIndex = payload.indexOf(",");
+    if (commaIndex > 0) {
+      String sensorID = payload.substring(0, commaIndex);
+      String distanceStr = payload.substring(commaIndex + 1);
+
+      if (sensorID == GATEWAY_ID) {
+        float distance = distanceStr.toFloat();
+        Serial.printf("[%s] Distance received: %.2f m\n", GATEWAY_ID, distance);
+
+        String path = "realtime/" + sensorID;
+        if (!Firebase.RTDB.setFloat(&fbdo, path + "/distance", distance)) {
+          Serial.printf("DB write failed: %s\n", fbdo.errorReason().c_str());
+        }
+        if (!Firebase.RTDB.setInt(&fbdo, path + "/timestamp", millis())) {
+          Serial.printf("Timestamp write failed: %s\n", fbdo.errorReason().c_str());
+        }
+      } else {
+        Serial.printf("Ignored packet from %s (not my sensor)\n", sensorID.c_str());
+      }
+    }
+  }
+}
