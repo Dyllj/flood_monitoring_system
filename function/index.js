@@ -274,6 +274,26 @@
   );
 
 // ================================
+// SCHEDULED CHECK
+// ================================
+exports.checkDeviceActivity = onSchedule(
+  { schedule: "every 2 minutes", region: "asia-southeast1" },
+  async () => {
+    try {
+      const firestoreDb = getFirestoreDb();
+      const devicesSnapshot = await firestoreDb.collection("devices").get();
+
+      for (const doc of devicesSnapshot.docs) {
+        await toggleDeviceStatus(doc); // call separate function
+      }
+    } catch (err) {
+      console.error("❌ Device activity check failed:", err.message);
+    }
+  }
+);
+
+
+// ================================
 // DEVICE STATUS AUTO TOGGLE - SEPARATE FUNCTION
 // ================================
 const toggleDeviceStatus = async (doc) => {
@@ -319,24 +339,6 @@ const toggleDeviceStatus = async (doc) => {
   }
 };
 
-// ================================
-// SCHEDULED CHECK
-// ================================
-exports.checkDeviceActivity = onSchedule(
-  { schedule: "every 2 minutes", region: "asia-southeast1" },
-  async () => {
-    try {
-      const firestoreDb = getFirestoreDb();
-      const devicesSnapshot = await firestoreDb.collection("devices").get();
-
-      for (const doc of devicesSnapshot.docs) {
-        await toggleDeviceStatus(doc); // call separate function
-      }
-    } catch (err) {
-      console.error("❌ Device activity check failed:", err.message);
-    }
-  }
-);
 
 
   // ================================
