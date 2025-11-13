@@ -413,7 +413,6 @@ exports.checkDeviceActivity = onSchedule(
       await deviceRef.update({
         lastUpdate: FieldValue.serverTimestamp(),
         waterLevelStatus,
-        status: "active",
       });
     } catch (err) {
       console.error("❌ Failed to log reading:", err.message);
