@@ -274,7 +274,8 @@
   );
 
 // ================================
-// SCHEDULED CHECK
+// SCHEDULED DEVICE STATUS CHECK
+// Logs offline and online events reliably
 // ================================
 exports.checkDeviceActivity = onSchedule(
   { schedule: "every 2 minutes", region: "asia-southeast1" },
@@ -292,19 +293,20 @@ exports.checkDeviceActivity = onSchedule(
   }
 );
 
-
 // ================================
-// DEVICE STATUS AUTO TOGGLE - SEPARATE FUNCTION
+// TOGGLE DEVICE STATUS FUNCTION
+// Automatically logs device offline/online events
 // ================================
 const toggleDeviceStatus = async (doc) => {
   const firestoreDb = getFirestoreDb();
   const data = doc.data();
   const sensorId = doc.id;
   const now = Date.now();
-  const THRESHOLD = 1 * 60 * 1000; // 1 minute
+  const THRESHOLD = 2 * 60 * 1000; // 2 minutes
+
   const lastUpdate = data.lastUpdate?.toMillis?.() || 0;
 
-  // Define log references
+  // Log references
   const offlineLogsRef = firestoreDb
     .collection("devices-logs")
     .doc(sensorId)
@@ -315,27 +317,32 @@ const toggleDeviceStatus = async (doc) => {
     .doc(sensorId)
     .collection("device-online-logs");
 
-  // Device went offline
-  if (now - lastUpdate > THRESHOLD && data.status !== "inactive") {
-    await doc.ref.update({ status: "inactive" });
-    await offlineLogsRef.add({
-      timestamp: FieldValue.serverTimestamp(),
-      status: "inactive",
-      message: `Device ${sensorId} stopped sending readings.`,
-      reason: `No new data for more than ${THRESHOLD / 60000} minutes`,
-    });
-    console.log(`📴 ${sensorId} → INACTIVE (logged offline event)`);
-  }
-  // Device came online
-  else if (now - lastUpdate <= THRESHOLD && data.status === "inactive") {
-    await doc.ref.update({ status: "active" });
-    await onlineLogsRef.add({
-      timestamp: FieldValue.serverTimestamp(),
-      status: "active",
-      message: `Device ${sensorId} resumed sending readings.`,
-      reason: "New data received after being inactive",
-    });
-    console.log(`✅ ${sensorId} → ACTIVE (logged online event)`);
+  // Determine the desired status based on lastUpdate
+  const desiredStatus = (now - lastUpdate > THRESHOLD) ? "inactive" : "active";
+
+  // Only update if status has changed
+  if (data.status !== desiredStatus) {
+    await doc.ref.update({ status: desiredStatus });
+
+    if (desiredStatus === "inactive") {
+      // Device went offline
+      await offlineLogsRef.add({
+        timestamp: FieldValue.serverTimestamp(),
+        status: "inactive",
+        message: `Device ${sensorId} stopped sending readings.`,
+        reason: `No new data for more than ${THRESHOLD / 60000} minutes`,
+      });
+      console.log(`📴 ${sensorId} → INACTIVE (logged offline event)`);
+    } else {
+      // Device came online
+      await onlineLogsRef.add({
+        timestamp: FieldValue.serverTimestamp(),
+        status: "active",
+        message: `Device ${sensorId} resumed sending readings.`,
+        reason: "New data received after being inactive",
+      });
+      console.log(`✅ ${sensorId} → ACTIVE (logged online event)`);
+    }
   }
 };
 
