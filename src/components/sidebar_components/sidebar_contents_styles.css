@@ -910,6 +910,7 @@ body {
 }
 .chart-toggle-icon{
   position: absolute;
+  z-index: 10;
   right: 1.5rem;
   top: 13.5rem;
   font-size: 1.3rem;
