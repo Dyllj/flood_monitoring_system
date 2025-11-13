@@ -294,7 +294,7 @@ const toggleDeviceStatus = async (doc) => {
   const data = doc.data();
   const sensorId = doc.id;
   const now = Date.now();
-  const THRESHOLD = 1 * 60 * 1000; // 1 minute
+  const THRESHOLD = 2 * 60 * 1000; // 2 minute
   const lastUpdate = data.lastUpdate?.toMillis?.() || 0;
 
   const offlineLogsRef = firestoreDb
