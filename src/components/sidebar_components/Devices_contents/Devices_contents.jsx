@@ -303,7 +303,7 @@ const Devices_contents = ({ isAdmin }) => {
                       </linearGradient>
                     </defs>
                     <Area
-                      type="monotone"
+                      type="linear"
                       dataKey="value"
                       stroke={color}
                       fill={`url(#waterColor-${device.id})`}
