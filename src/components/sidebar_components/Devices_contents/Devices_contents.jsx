@@ -311,6 +311,7 @@ const Devices_contents = ({ isAdmin }) => {
                       dot={false}
                       isAnimationActive={true}
                       className="waterlevel-area"
+                      style={{ pointerEvents: "none" }}
                     />
                   </AreaChart>
                 </ResponsiveContainer>
