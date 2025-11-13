@@ -281,27 +281,33 @@
 exports.checkDeviceActivity = onSchedule(
   { schedule: "every 2 minutes", region: "asia-southeast1" },
   async () => {
-    const firestoreDb = getFirestoreDb();
     const now = Date.now();
     const THRESHOLD = 2 * 60 * 1000; // 2 minutes
 
     try {
-      const devices = await firestoreDb.collection("devices").get();
-      for (const doc of devices.docs) {
+      const devicesSnapshot = await firestoreDb.collection("devices").get();
+
+      for (const doc of devicesSnapshot.docs) {
         const data = doc.data();
         const sensorId = doc.id;
         const lastUpdate = data.lastUpdate?.toMillis?.() || 0;
-        const deviceLogsRef = firestoreDb
+
+        // Define separate subcollections
+        const offlineLogsRef = firestoreDb
           .collection("devices-logs")
           .doc(sensorId)
           .collection("device-offline-logs");
 
-        // Device has gone offline (inactive)
+        const onlineLogsRef = firestoreDb
+          .collection("devices-logs")
+          .doc(sensorId)
+          .collection("device-online-logs");
+
+        // Device went offline
         if (now - lastUpdate > THRESHOLD && data.status !== "inactive") {
           await doc.ref.update({ status: "inactive" });
 
-          // ✅ Log the offline event
-          await deviceLogsRef.add({
+          await offlineLogsRef.add({
             timestamp: admin.firestore.FieldValue.serverTimestamp(),
             status: "inactive",
             message: `Device ${sensorId} stopped sending readings.`,
@@ -311,19 +317,18 @@ exports.checkDeviceActivity = onSchedule(
           console.log(`📴 ${sensorId} → INACTIVE (logged offline event)`);
         }
 
-        // Device came back online
+        // Device came online
         else if (now - lastUpdate <= THRESHOLD && data.status === "inactive") {
           await doc.ref.update({ status: "active" });
 
-          // ✅ Optional: Log reactivation (so admin knows when it came back)
-          await deviceLogsRef.add({
+          await onlineLogsRef.add({
             timestamp: admin.firestore.FieldValue.serverTimestamp(),
             status: "active",
             message: `Device ${sensorId} resumed sending readings.`,
             reason: "New data received after being inactive",
           });
 
-          console.log(`✅ ${sensorId} → ACTIVE (logged reactivation)`);
+          console.log(`✅ ${sensorId} → ACTIVE (logged online event)`);
         }
       }
     } catch (err) {
