@@ -273,69 +273,71 @@
     }
   );
 
-  // ================================
-  // DEVICE STATUS AUTO TOGGLE
-  // Automatically sets devices to "inactive" if no new data for 2 minutes
-  // and back to "active" if new data comes in
-  // ================================
+// ================================
+// DEVICE STATUS AUTO TOGGLE - SEPARATE FUNCTION
+// ================================
+const toggleDeviceStatus = async (doc) => {
+  const firestoreDb = getFirestoreDb();
+  const data = doc.data();
+  const sensorId = doc.id;
+  const now = Date.now();
+  const THRESHOLD = 1 * 60 * 1000; // 1 minute
+  const lastUpdate = data.lastUpdate?.toMillis?.() || 0;
+
+  // Define log references
+  const offlineLogsRef = firestoreDb
+    .collection("devices-logs")
+    .doc(sensorId)
+    .collection("device-offline-logs");
+
+  const onlineLogsRef = firestoreDb
+    .collection("devices-logs")
+    .doc(sensorId)
+    .collection("device-online-logs");
+
+  // Device went offline
+  if (now - lastUpdate > THRESHOLD && data.status !== "inactive") {
+    await doc.ref.update({ status: "inactive" });
+    await offlineLogsRef.add({
+      timestamp: FieldValue.serverTimestamp(),
+      status: "inactive",
+      message: `Device ${sensorId} stopped sending readings.`,
+      reason: `No new data for more than ${THRESHOLD / 60000} minutes`,
+    });
+    console.log(`📴 ${sensorId} → INACTIVE (logged offline event)`);
+  }
+  // Device came online
+  else if (now - lastUpdate <= THRESHOLD && data.status === "inactive") {
+    await doc.ref.update({ status: "active" });
+    await onlineLogsRef.add({
+      timestamp: FieldValue.serverTimestamp(),
+      status: "active",
+      message: `Device ${sensorId} resumed sending readings.`,
+      reason: "New data received after being inactive",
+    });
+    console.log(`✅ ${sensorId} → ACTIVE (logged online event)`);
+  }
+};
+
+// ================================
+// SCHEDULED CHECK
+// ================================
 exports.checkDeviceActivity = onSchedule(
   { schedule: "every 2 minutes", region: "asia-southeast1" },
   async () => {
-    const now = Date.now();
-    const THRESHOLD = 2 * 60 * 1000; // 2 minutes
-
     try {
+      const firestoreDb = getFirestoreDb();
       const devicesSnapshot = await firestoreDb.collection("devices").get();
 
       for (const doc of devicesSnapshot.docs) {
-        const data = doc.data();
-        const sensorId = doc.id;
-        const lastUpdate = data.lastUpdate?.toMillis?.() || 0;
-
-        // Define separate subcollections
-        const offlineLogsRef = firestoreDb
-          .collection("devices-logs")
-          .doc(sensorId)
-          .collection("device-offline-logs");
-
-        const onlineLogsRef = firestoreDb
-          .collection("devices-logs")
-          .doc(sensorId)
-          .collection("device-online-logs");
-
-        // Device went offline
-        if (now - lastUpdate > THRESHOLD && data.status !== "inactive") {
-          await doc.ref.update({ status: "inactive" });
-
-          await offlineLogsRef.add({
-            timestamp: admin.firestore.FieldValue.serverTimestamp(),
-            status: "inactive",
-            message: `Device ${sensorId} stopped sending readings.`,
-            reason: "No new data for more than 2 minutes",
-          });
-
-          console.log(`📴 ${sensorId} → INACTIVE (logged offline event)`);
-        }
-
-        // Device came online
-        else if (now - lastUpdate <= THRESHOLD && data.status === "inactive") {
-          await doc.ref.update({ status: "active" });
-
-          await onlineLogsRef.add({
-            timestamp: admin.firestore.FieldValue.serverTimestamp(),
-            status: "active",
-            message: `Device ${sensorId} resumed sending readings.`,
-            reason: "New data received after being inactive",
-          });
-
-          console.log(`✅ ${sensorId} → ACTIVE (logged online event)`);
-        }
+        await toggleDeviceStatus(doc); // call separate function
       }
     } catch (err) {
       console.error("❌ Device activity check failed:", err.message);
     }
   }
 );
+
 
   // ================================
   // 🔄 DEVICE READINGS LOGGER (Updated)
