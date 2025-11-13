@@ -82,8 +82,8 @@
 /* Position it at the top-right of the modal container */
 .modal-filter-icon {
   position: absolute;       /* Position relative to modal-container */
-  top: 4.3rem;                /* Adjust distance from top */
-  left: 27rem;              /* Adjust distance from right */
+  top: 2.3rem;                /* Adjust distance from top */
+  left: 20rem;              /* Adjust distance from right */
   font-size: 1.8rem;          /* Icon size */          /* Icon color */
   cursor: pointer;          /* Pointer cursor on hover */
   transition: transform 0.2s;
@@ -93,16 +93,15 @@
   color: #007bff;           /* Optional hover color */
 }
 .history-container {
-    margin: 1rem 0;
     height: 5rem;
-    width: 90%;
-    margin: 1.5rem auto 0 auto;
+    width: 100%;
+    background: red;
     border-bottom: 2px solid #ccc;
 }
 #history-title {
     position: absolute;
     line-height: 5rem;
-    margin: 0 2rem;
+    margin: -0.5rem 0;
     font-size: 1.5rem;
 }
 .history-filter {
