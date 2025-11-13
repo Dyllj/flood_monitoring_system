@@ -278,32 +278,59 @@
   // Automatically sets devices to "inactive" if no new data for 2 minutes
   // and back to "active" if new data comes in
   // ================================
-  exports.checkDeviceActivity = onSchedule(
-    { schedule: "every 2 minutes", region: "asia-southeast1" },
-    async () => {
-      const firestoreDb = getFirestoreDb();
-      const now = Date.now();
-      const THRESHOLD = 2 * 60 * 1000; // 2 minutes
+exports.checkDeviceActivity = onSchedule(
+  { schedule: "every 2 minutes", region: "asia-southeast1" },
+  async () => {
+    const firestoreDb = getFirestoreDb();
+    const now = Date.now();
+    const THRESHOLD = 2 * 60 * 1000; // 2 minutes
 
-      try {
-        const devices = await firestoreDb.collection("devices").get();
-        for (const doc of devices.docs) {
-          const data = doc.data();  
-          const lastUpdate = data.lastUpdate?.toMillis?.() || 0;
+    try {
+      const devices = await firestoreDb.collection("devices").get();
+      for (const doc of devices.docs) {
+        const data = doc.data();
+        const sensorId = doc.id;
+        const lastUpdate = data.lastUpdate?.toMillis?.() || 0;
+        const deviceLogsRef = firestoreDb
+          .collection("devices-logs")
+          .doc(sensorId)
+          .collection("device-offline-logs");
 
-          if (now - lastUpdate > THRESHOLD && data.status !== "inactive") {
-            await doc.ref.update({ status: "inactive" });
-            console.log(`${doc.id} → INACTIVE`);
-          } else if (now - lastUpdate <= THRESHOLD && data.status === "inactive") {
-            await doc.ref.update({ status: "active" });
-            console.log(`${doc.id} → ACTIVE`);
-          }
+        // Device has gone offline (inactive)
+        if (now - lastUpdate > THRESHOLD && data.status !== "inactive") {
+          await doc.ref.update({ status: "inactive" });
+
+          // ✅ Log the offline event
+          await deviceLogsRef.add({
+            timestamp: admin.firestore.FieldValue.serverTimestamp(),
+            status: "inactive",
+            message: `Device ${sensorId} stopped sending readings.`,
+            reason: "No new data for more than 2 minutes",
+          });
+
+          console.log(`📴 ${sensorId} → INACTIVE (logged offline event)`);
         }
-      } catch (err) {
-        console.error("❌ Device activity check failed:", err.message);
+
+        // Device came back online
+        else if (now - lastUpdate <= THRESHOLD && data.status === "inactive") {
+          await doc.ref.update({ status: "active" });
+
+          // ✅ Optional: Log reactivation (so admin knows when it came back)
+          await deviceLogsRef.add({
+            timestamp: admin.firestore.FieldValue.serverTimestamp(),
+            status: "active",
+            message: `Device ${sensorId} resumed sending readings.`,
+            reason: "New data received after being inactive",
+          });
+
+          console.log(`✅ ${sensorId} → ACTIVE (logged reactivation)`);
+        }
       }
+    } catch (err) {
+      console.error("❌ Device activity check failed:", err.message);
     }
-  );
+  }
+);
 
   // ================================
   // 🔄 DEVICE READINGS LOGGER (Updated)
