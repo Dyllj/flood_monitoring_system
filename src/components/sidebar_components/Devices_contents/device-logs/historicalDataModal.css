@@ -1,12 +1,9 @@
-/* src/components/sidebar_components/Devices_contents/historicalDataModal.css */
-
-/* Overlay for modal background */
+/* ===============================
+   MODAL OVERLAY & CONTAINER
+================================== */
 #historical-data-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
+  inset: 0;
   background: rgba(0, 0, 0, 0.5);
   z-index: 999;
   display: flex;
@@ -14,126 +11,238 @@
   align-items: center;
 }
 
-/* Modal container */
 #historical-data-container {
   background: #fff;
-  border-radius: 10px;
-  padding: 20px;
-  max-width: 90rem;
-  width: 100%;
-  max-height: 90vh;
+  border-radius: 12px;
+  padding: 2rem;
+  max-width: 95rem;
+  width: 95%;
+  max-height: 100vh;
+  height: 95vh;
   overflow-y: auto;
-  box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
   position: relative;
+  animation: fadeIn 0.3s ease-in-out;
 }
 
-/* Modal header */
+/* HEADER + ICONS */
 #historical-data-container h2 {
-  margin-bottom: 20px;
-  font-size: 1.5rem;
+  margin-bottom: 1rem;
+  font-size: 1.7rem;
+  font-weight: 600;
   text-align: center;
-}
-
-/* Chart container inside modal */
-#historical-data-container .recharts-wrapper {
-  margin-top: 4rem;
-  margin-bottom: 20px;
+  color: #1e1e1e;
 }
 
 .modal-close-icon {
   position: absolute;
-  top: 1.5rem;
+  top: 1.2rem;
   right: 1.5rem;
-  font-size: 1.5rem;
+  font-size: 1.6rem;
   cursor: pointer;
-  color: #333;
+  color: #444;
   z-index: 10;
-  transition: transform 0.3s ease; /* Smooth transition for rotation */
+  transition: transform 0.3s ease, color 0.3s ease;
 }
 
 .modal-close-icon:hover {
-  transform: rotate(90deg) scale(2); /* Rotate 20 degrees on hover */
+  transform: rotate(90deg) scale(1.5);
+  color: #007bff;
 }
 
-
-.modal-container {
-  position: relative; /* ensure absolute inside works */
-  background: #fff;
-  padding: 20px;
-  border-radius: 8px;
-}
-
-
-/* Loading message */
-.modal {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background: #fff;
-  padding: 30px;
-  border-radius: 10px;
-  box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-  z-index: 1000;
-  text-align: center;
-  font-size: 1.2rem;
-}
-
-/* Position it at the top-right of the modal container */
 .modal-filter-icon {
-  position: absolute;       /* Position relative to modal-container */
-  top: 2.3rem;                /* Adjust distance from top */
-  left: 20rem;              /* Adjust distance from right */
-  font-size: 1.8rem;          /* Icon size */          /* Icon color */
-  cursor: pointer;          /* Pointer cursor on hover */
-  transition: transform 0.2s;
+  position: absolute;
+  top: 1.3rem;
+  left: 1.5rem;
+  font-size: 1.8rem;
+  cursor: pointer;
+  color: #333;
+  transition: color 0.2s, transform 0.2s;
 }
 
-.modal-filter-icon:hover {    /* Slight grow effect on hover */
-  color: #007bff;           /* Optional hover color */
+.modal-filter-icon:hover {
+  color: #007bff;
+  transform: scale(1.1);
 }
-.history-container {
-    height: 5rem;
-    width: 100%;
-    border-bottom: 2px solid #ccc;
+
+/* ===============================
+   2x2 GRID LAYOUT
+================================== */
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: repeat(2, auto);
+  gap: 20px;
+  margin-top: 1rem;
 }
-#history-title {
-    position: absolute;
-    line-height: 5rem;
-    margin: -0.5rem 0;
-    font-size: 1.5rem;
+
+.grid-item {
+  background: #fffefeff;
+  border-radius: 12px;
+  padding: 15px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.4);
+  transition: transform 0.2s ease;
+  display: flex;
+  flex-direction: column;
 }
-.history-filter {
-    display: flex;
-    justify-content: space-evenly;
-    gap: 1rem;
-    margin-top: 1rem;
+
+.grid-item:hover {
+  transform: translateY(-2px);
 }
-#apply-filter, #cancel-filter {
-    padding: 0.5rem 1rem;
-    font-size: 0.6rem;
-    border: none;
-    border-radius: 0.4em;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
+
+.grid-item h3 {
+  text-align: center;
+  margin-bottom: 10px;
+  font-weight: 600;
 }
+
+.area-chart-wrapper,
+.pie-chart-wrapper {
+  width: 100%;
+}
+
+.status-table-wrapper {
+  max-height: 250px;
+  overflow-y: auto;
+}
+
+/* ===============================
+   FILTER MODAL
+================================== */
 #history-filter-overlay {
-    width: 100%;
-    height: 100%;
-    position: fixed;
-    top:  -5rem;
-    left: -9rem;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
+  position: fixed;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: rgba(0,0,0,0.5);
+  z-index: 1000;
 }
+
 #history-filter-container {
-    background: #fff;
-    border-radius: 10px;
-    padding: 20px;
-    max-width: 20rem;
-    width: 100%;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-    position: relative;
+  background: #fff;
+  border-radius: 12px;
+  padding: 1.5rem;
+  max-width: 22rem;
+  width: 90%;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+  position: relative;
+  animation: slideDown 0.3s ease;
+}
+
+.history-filter {
+  display: flex;
+  justify-content: space-evenly;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+#apply-filter,
+#cancel-filter {
+  padding: 0.6rem 1.2rem;
+  font-size: 0.8rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+#apply-filter {
+  background-color: #007bff;
+  color: white;
+}
+
+#apply-filter:hover {
+  background-color: #0056b3;
+}
+
+#cancel-filter {
+  background-color: #e0e0e0;
+}
+
+#cancel-filter:hover {
+  background-color: #c0c0c0;
+}
+
+/* ===============================
+   RESPONSIVENESS
+================================== */
+@media (max-width: 900px) {
+  .charts-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ===============================
+   ANIMATIONS
+================================== */
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.98); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes slideDown {
+  from { transform: translateY(-20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* ===============================
+   STATUS TABLES
+================================== */
+.status-table-wrapper h3 {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.status-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 6px;
+  overflow: hidden;
+  font-size: 14px;
+}
+
+.status-table th {
+  background: #eaeaea;
+  padding: 10px;
+  text-align: left;
+}
+
+.status-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid #ddd;
+}
+
+.online-status {
+  color: #28a745;
+  font-weight: bold;
+}
+
+.offline-status {
+  color: #dc3545;
+  font-weight: bold;
+}
+
+/* ReferenceLine Labels */
+.ref-line-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  fill: #000;
+  opacity: 0.5;
+  font-family: 'Arial', sans-serif;
+}
+.custom-tooltip {
+  background: rgba(162, 160, 160, 0.9);
+  border: 1px solid #ccc;
+  padding: 0.5rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+/* Optional: Custom Tooltip Styling */
+.custom-tooltip p {
+  color: white;
+  margin: 0.2rem 0;
+  font-size: 0.85rem;
 }
