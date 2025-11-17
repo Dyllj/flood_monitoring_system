@@ -34,15 +34,12 @@ const CustomTooltip = ({ active, payload, label }) => {
 };
 
 const HistoricalDataModal = ({ sensorId, onClose }) => {
-  const [logs, setLogs] = useState([]);
   const [filteredLogs, setFilteredLogs] = useState([]);
   const [combinedDeviceLogs, setCombinedDeviceLogs] = useState([]);
   const [alertLogs, setAlertLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [maxMetadata, setMaxMetadata] = useState({});
-  const [filterOpen, setFilterOpen] = useState(false);
-  const [filterStart, setFilterStart] = useState("");
-  const [filterEnd, setFilterEnd] = useState("");
+
 
   useEffect(() => {
     const fetchAllLogs = async () => {
@@ -88,7 +85,7 @@ const HistoricalDataModal = ({ sensorId, onClose }) => {
           }
         });
 
-        setLogs(uniqueLogs);
+
         setFilteredLogs(uniqueLogs);
 
         // 2. Fetch online/offline logs
@@ -147,14 +144,6 @@ const HistoricalDataModal = ({ sensorId, onClose }) => {
     fetchAllLogs();
   }, [sensorId]);
 
-  const applyFilter = () => {
-    if (!filterStart || !filterEnd) return;
-    const start = new Date(filterStart).getTime();
-    const end = new Date(filterEnd).getTime();
-    setFilteredLogs(logs.filter((log) => log.timestamp >= start && log.timestamp <= end));
-    setFilterOpen(false);
-  };
-
   if (loading) return <div className="modal">Loading...</div>;
 
   const yDomain = [0, maxMetadata.maxHeight || 7];
@@ -163,7 +152,7 @@ const HistoricalDataModal = ({ sensorId, onClose }) => {
     <div className="modal-overlay" id="historical-data-overlay" onClick={onClose}>
       <div className="modal-container" id="historical-data-container" onClick={(e) => e.stopPropagation()}>
         <HiMiniXMark className="modal-close-icon" onClick={onClose} />
-        <TbFilterCog className="modal-filter-icon" onClick={() => setFilterOpen(true)} />
+
 
         <div className="history-container">
           <h2 id="history-title">{sensorId} Historical Data</h2>
@@ -175,7 +164,7 @@ const HistoricalDataModal = ({ sensorId, onClose }) => {
           <div className="charts-grid">
             {/* Historical Device Data */}
             <div className="grid-item">
-              <h3>Historical Data</h3>
+              <h3>Historical Readings Data</h3>
               <div className="area-chart-wrapper">
                 <ResponsiveContainer width="100%" height={250}>
                   <AreaChart data={filteredLogs}>
@@ -188,9 +177,9 @@ const HistoricalDataModal = ({ sensorId, onClose }) => {
                       tickLine={false} 
                     />
                     <Tooltip content={<CustomTooltip />} />
-                    <ReferenceLine y={maxMetadata.maxHeight} stroke="#8884d8" strokeDasharray="1.5 1.5" label={{ value: "Max Height" }} />
-                    <ReferenceLine y={maxMetadata.normalLevel} stroke="#82ca9d" strokeDasharray="1.5 1.5" label={{ value: "Normal" }} />
-                    <ReferenceLine y={maxMetadata.alertLevel} stroke="#ff7300" strokeDasharray="1.5 1.5" label={{ value: "Alert" }} />
+                    <ReferenceLine y={maxMetadata.maxHeight} stroke="#8884d8" strokeDasharray="1.5 1.5" label={{ value: "Max Height", className: "ref-line-label" }} />
+                    <ReferenceLine y={maxMetadata.normalLevel} stroke="#82ca9d" strokeDasharray="1.5 1.5" label={{ value: "Normal", className: "ref-line-label" }} />
+                    <ReferenceLine y={maxMetadata.alertLevel} stroke="#ff7300" strokeDasharray="1.5 1.5" label={{ value: "Alert", className: "ref-line-label" }} />
                     <Area type="linear" dataKey="distance" stroke="#061694" strokeWidth={2} fill="none" />
                   </AreaChart>
                 </ResponsiveContainer>
@@ -282,26 +271,7 @@ const HistoricalDataModal = ({ sensorId, onClose }) => {
           </div>
         )}
 
-        {/* FILTER MODAL */}
-        {filterOpen && (
-          <div className="filter-modal-overlay" id="history-filter-overlay" onClick={() => setFilterOpen(false)}>
-            <div className="filter-modal-container" id="history-filter-container" onClick={(e) => e.stopPropagation()}>
-              <h3>Filter Historical Data</h3>
-              <label>
-                Start Date:
-                <input type="datetime-local" value={filterStart} onChange={(e) => setFilterStart(e.target.value)} />
-              </label>
-              <label>
-                End Date:
-                <input type="datetime-local" value={filterEnd} onChange={(e) => setFilterEnd(e.target.value)} />
-              </label>
-              <div className="history-filter">
-                <button id="apply-filter" onClick={applyFilter}>Apply Filter</button>
-                <button id="cancel-filter" onClick={() => setFilterOpen(false)}>Cancel</button>
-              </div>
-            </div>
-          </div>
-        )}
+
       </div>
     </div>
   );

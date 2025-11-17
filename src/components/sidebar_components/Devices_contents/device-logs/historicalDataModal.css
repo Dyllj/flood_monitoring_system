@@ -34,6 +34,23 @@
   color: #1e1e1e;
 }
 
+.modal{
+  display: flex;
+  text-align: center;
+  justify-content: center;
+  margin: auto;
+  max-width: 10rem;
+  max-height: 30rem;
+  height: 100%;
+  width: 100%;
+  padding: 1.5rem;
+  background: #4b4949ff;
+  border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+  color: white;
+}
+
+
 .modal-close-icon {
   position: absolute;
   top: 1.2rem;
@@ -47,23 +64,9 @@
 
 .modal-close-icon:hover {
   transform: rotate(90deg) scale(1.5);
-  color: #007bff;
+  color: #ff0000ff;
 }
 
-.modal-filter-icon {
-  position: absolute;
-  top: 1.3rem;
-  left: 1.5rem;
-  font-size: 1.8rem;
-  cursor: pointer;
-  color: #333;
-  transition: color 0.2s, transform 0.2s;
-}
-
-.modal-filter-icon:hover {
-  color: #007bff;
-  transform: scale(1.1);
-}
 
 /* ===============================
    2x2 GRID LAYOUT
