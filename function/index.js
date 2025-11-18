@@ -91,7 +91,7 @@ function buildFloodAlertMessage(type, location, distance, status) {
 
   return `${type.toUpperCase()} FLOOD ALERT
 Maayung Adlaw!
-Ang tubig sa ${location} naabot sa lebel na ${distance}m (${status}).
+Ang tubig sa ${location} naabot na sa lebel nga ${distance}m (${status}).
 Pag-alerto ug pag-andam sa posibleng baha.
 Time: ${alertTime}
 - Sent by Molave Municipal Risk Reduction and Management Office`;
