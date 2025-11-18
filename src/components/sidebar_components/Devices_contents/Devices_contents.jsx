@@ -1,6 +1,6 @@
 // src/components/sidebar_components/Devices_contents/Devices_contents.jsx
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import "../../sidebar_components/sidebar_contents_styles.css";
 import { IoIosAdd } from "react-icons/io";
 import { ImLocation } from "react-icons/im";
@@ -8,11 +8,12 @@ import { MdDeleteOutline } from "react-icons/md";
 import { IoSettingsOutline } from "react-icons/io5";
 import { LuChevronsLeftRight } from "react-icons/lu";
 import { MdOutlineNotificationsActive } from "react-icons/md";
+import { MdOutlineEditNotifications } from "react-icons/md";
 
 import AddDevice from "../../add-forms/Add-device.jsx";
 import { db, realtimeDB } from "../../../auth/firebase_auth";
 import { collection, onSnapshot } from "firebase/firestore";
-import { ref, onValue, off } from "firebase/database";
+import { ref, onValue, off, get, onChildAdded, onChildChanged } from "firebase/database";
 
 import {
   AreaChart,
@@ -30,9 +31,11 @@ import { getStatus } from "./Devices_contents_functions/getStatus";
 import { getColor } from "./Devices_contents_functions/getColor";
 import SmsAlertSuccess from "../../custom-notification/for-sms-alert/sms-alert-success";
 import SmsAlertFailed from "../../custom-notification/for-sms-alert/sms-alert-failed";
+import AutoSmsAlertSuccess from "../../custom-notification/for-sms-alert/auto-sms-alert-success.jsx";
 import { handleSendSms } from "./Devices_contents_functions/handleSendSms";
 
 import HistoricalDataModal from "../Devices_contents/device-logs/HistoricalDataModal.jsx"; // 🔹 import
+
 
 const Devices_contents = ({ isAdmin }) => {
   const [showAddDevice, setShowAddDevice] = useState(false);
@@ -51,8 +54,13 @@ const Devices_contents = ({ isAdmin }) => {
   const [showSmsAlert, setShowSmsAlert] = useState(false);
   const [showSmsAlertFailed, setShowSmsAlertFailed] = useState(false);
 
+  // New: auto-sms alert state + seen-tracker ref
+  const [autoSmsAlert, setAutoSmsAlert] = useState(null); // { sensorName, location, status }
+  const autoAlertSeenRef = useRef({});
+
   // 🔹 New state for historical modal
   const [historicalModalSensor, setHistoricalModalSensor] = useState(null);
+
 
   // ----------------------------
   // Firestore listener (devices)
@@ -81,14 +89,14 @@ const Devices_contents = ({ isAdmin }) => {
   }, []);
 
   // ----------------------------
-  // Realtime DB listener
+  // Realtime DB listener (sensor readings)
   // ----------------------------
   useEffect(() => {
     const listeners = [];
 
     devices.forEach((device) => {
       const sensorRef = ref(realtimeDB, `realtime/${device.sensorName}`);
-      const unsubscribe = onValue(sensorRef, (snapshot) => {
+      const handler = (snapshot) => {
         const data = snapshot.val();
         if (data) {
           setSensorData((prev) => ({
@@ -111,22 +119,82 @@ const Devices_contents = ({ isAdmin }) => {
             return { ...prev, [device.sensorName]: updated };
           });
         }
-      });
+      };
 
-      listeners.push(() => off(sensorRef, "value", unsubscribe));
+      onValue(sensorRef, handler);
+      listeners.push(() => off(sensorRef, "value", handler));
     });
 
     return () => listeners.forEach((unsub) => unsub());
   }, [devices]);
 
-  const addSensorTooltip = () => {
+  // ----------------------------
+  // Realtime DB listener (alerts) - show auto SMS notification only for auto_sent alerts
+  // ----------------------------
+  useEffect(() => {
+    const alertsRef = ref(realtimeDB, "alerts");
+    let initialized = false;
+
+    // perform a one-time read so we can ignore existing records
+    get(alertsRef)
+      .catch(() => null) // ignore errors but still proceed
+      .then(() => {
+        initialized = true;
+      });
+
+    const handleChildAdded = (snap) => {
+      if (!initialized) return; // ignore existing children on first load
+      const alertObj = snap.val();
+      const sensorName = snap.key;
+      if (!alertObj) return;
+      if (alertObj.auto_sent) {
+        if (autoAlertSeenRef.current[sensorName]) return;
+        autoAlertSeenRef.current[sensorName] = true;
+        setAutoSmsAlert({
+          sensorName,
+          location: alertObj.location || "",
+          status: alertObj.status || "",
+        });
+        setTimeout(() => setAutoSmsAlert(null), 4000);
+      }
+    };
+
+    const handleChildChanged = (snap) => {
+      // child_changed won't fire for initial state, so no extra guard required
+      const alertObj = snap.val();
+      const sensorName = snap.key;
+      if (!alertObj) return;
+      if (alertObj.auto_sent) {
+        if (autoAlertSeenRef.current[sensorName]) return;
+        autoAlertSeenRef.current[sensorName] = true;
+        setAutoSmsAlert({
+          sensorName,
+          location: alertObj.location || "",
+          status: alertObj.status || "",
+        });
+        setTimeout(() => setAutoSmsAlert(null), 4000);
+      }
+    };
+
+    // listen for newly added alerts (after initial load) and for updates
+    onChildAdded(alertsRef, handleChildAdded);
+    onChildChanged(alertsRef, handleChildChanged);
+
+    return () => {
+      off(alertsRef, "child_added", handleChildAdded);
+      off(alertsRef, "child_changed", handleChildChanged);
+    };
+    // only run once on mount
+  }, []);
+
+  function addSensorTooltip() {
     const parent = document.querySelector(".sensor-label");
     if (!parent || parent.querySelector(".input-tooltip")) return;
     const tooltip = document.createElement("span");
     tooltip.innerText = "This field cannot be edited!";
     tooltip.className = "input-tooltip";
     parent.appendChild(tooltip);
-  };
+  }
 
   const removeSensorTooltip = () => {
     const parent = document.querySelector(".sensor-label");
@@ -144,10 +212,21 @@ const Devices_contents = ({ isAdmin }) => {
     handleEdit(deviceInMeters, setEditingDevice, setEditData);
   };
 
+ 
   return (
     <>
+      {/* Manual SMS notifications */}
       {showSmsAlert && <SmsAlertSuccess />}
       {showSmsAlertFailed && <SmsAlertFailed />}
+
+      {/* Auto SMS notification (only shown when auto-alert recorded in RTDB) */}
+      {autoSmsAlert && (
+        <AutoSmsAlertSuccess
+          sensorName={autoSmsAlert.sensorName}
+          subText={`${autoSmsAlert.location} — ${autoSmsAlert.status}`}
+          onClose={() => setAutoSmsAlert(null)}
+        />
+      )}
 
       <div className="devices-contents"></div>
 
@@ -203,6 +282,13 @@ const Devices_contents = ({ isAdmin }) => {
 
                   {isAdmin && (
                     <>
+                      <button
+                        className="edit-notify-btn"
+                        title="Edit notification"// open edit-template modal
+                      >
+                        <MdOutlineEditNotifications />
+                      </button>
+
                       <button
                         className="notify-btn"
                         onClick={async () => {
@@ -287,7 +373,7 @@ const Devices_contents = ({ isAdmin }) => {
               <div className="waterlevel-chart-container">
                 <ResponsiveContainer>
                   <AreaChart data={chartData}>
-                    <XAxis dataKey="time" />
+                    <XAxis dataKey="time" hide/>
                     <YAxis domain={[0, maxHeight]} />
                     <CartesianGrid stroke="rgba(16,16,16,0.5)" />
                     <defs>

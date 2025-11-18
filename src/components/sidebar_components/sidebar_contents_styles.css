@@ -344,7 +344,7 @@ body {
 }
 
 /* ✅ Shared button styling */
-.edit-btn, .delete-btn, .notify-btn {
+.edit-btn, .delete-btn, .notify-btn, .edit-notify-btn {
   background: none;
   border: none;
   color: #444;
@@ -354,13 +354,16 @@ body {
 }
 
 /* ✅ Subtle hover scale for all */
-.edit-btn:hover, .delete-btn:hover, .notify-btn:hover {
+.edit-btn:hover, .delete-btn:hover, .notify-btn:hover, .edit-notify-btn:hover {
   transform: scale(1.2);
 }
 
 /* ✅ Notification icon turns red on hover */
 .notify-btn:hover {
   color: red;
+}
+.edit-notify-btn:hover {
+  color: #007bff; /* blue */
 }
 
 .action-buttons {
@@ -481,7 +484,7 @@ body {
 
 
 #save_changes,
-#cancel_save,.unique-save-btn, .unique-cancel-btn {
+#cancel_save,.unique-save-btn, .unique-cancel-btn, .message-cancel-btn, #save-template {
   border: 1px solid #011627;
   padding: 8px 16px;
   margin-top: 2rem;
@@ -490,21 +493,21 @@ body {
   transition: all 0.3s ease;
 }
 
-#save_changes, .unique-save-btn {
+#save_changes, .unique-save-btn, #save-template {
   background: #28a745;
   color: white;
 }
 
-#save_changes:hover, .unique-save-btn:hover {
+#save_changes:hover, .unique-save-btn:hover, #save-template:hover {
   background-color: #1f512aff;
   transition: background-color .3s ease;
 }
 
-#cancel_save, .unique-cancel-btn {
+#cancel_save, .unique-cancel-btn, .message-cancel-btn {
   background: #dc3545;
 }
 
-#cancel_save:hover, .unique-cancel-btn:hover {
+#cancel_save:hover, .unique-cancel-btn:hover, .message-cancel-btn:hover {
    background-color: #56161cff;
   transition: background-color .3s ease;
 }
@@ -922,3 +925,30 @@ body {
   transform: scale(1.1);
   color: rgba(0, 0, 0, 0.7);
 }
+#edit-message-container{
+  width: 40%;
+  height: 60%;
+  margin: auto;
+}
+textarea{
+  width: 100%;
+  height: 50%;
+  resize: none;
+  padding: 10px;
+  font-size: 1rem;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  box-sizing: border-box;
+}
+textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 5px rgba(59, 130, 246, 0.5);
+}
+#edit-message-btn{
+  margin-top: 4rem;
+}
+#save-template, .message-cancel-btn{
+  margin-top: 2.5rem;
+}
+
