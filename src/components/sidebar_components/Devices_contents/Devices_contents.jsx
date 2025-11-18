@@ -11,7 +11,7 @@ import { MdOutlineNotificationsActive } from "react-icons/md";
 import { MdOutlineEditNotifications } from "react-icons/md";
 
 import AddDevice from "../../add-forms/Add-device.jsx";
-import { db, realtimeDB } from "../../../auth/firebase_auth";
+import { db, realtimeDB } from "../../../auth/firebase_auth.js";
 import { collection, onSnapshot } from "firebase/firestore";
 import { ref, onValue, off, get, onChildAdded, onChildChanged } from "firebase/database";
 
@@ -24,17 +24,18 @@ import {
   CartesianGrid,
 } from "recharts";
 
-import { handleDelete } from "./Devices_contents_functions/handleDelete";
-import { handleEdit } from "./Devices_contents_functions/handleEdit";
-import { handleEditSubmit } from "./Devices_contents_functions/handleEditSubmit";
-import { getStatus } from "./Devices_contents_functions/getStatus";
-import { getColor } from "./Devices_contents_functions/getColor";
-import SmsAlertSuccess from "../../custom-notification/for-sms-alert/sms-alert-success";
-import SmsAlertFailed from "../../custom-notification/for-sms-alert/sms-alert-failed";
+import { handleDelete } from "../Devices_contents/Devices_contents_functions/handleDelete.js";
+import { handleEdit } from "../Devices_contents/Devices_contents_functions/handleEdit.js";
+import { handleEditSubmit } from "../Devices_contents/Devices_contents_functions/handleEditSubmit.js";
+import { getStatus } from "../Devices_contents/Devices_contents_functions/getStatus.js";
+import { getColor } from "../Devices_contents/Devices_contents_functions/getColor.js";
+import SmsAlertSuccess from "../../custom-notification/for-sms-alert/sms-alert-success.jsx";
+import SmsAlertFailed from "../../custom-notification/for-sms-alert/sms-alert-failed.jsx";
 import AutoSmsAlertSuccess from "../../custom-notification/for-sms-alert/auto-sms-alert-success.jsx";
-import { handleSendSms } from "./Devices_contents_functions/handleSendSms";
+import { handleSendSms } from "../Devices_contents/Devices_contents_functions/handleSendSms.js";
 
-import HistoricalDataModal from "../Devices_contents/device-logs/HistoricalDataModal.jsx"; // 🔹 import
+import HistoricalDataModal from "./device-logs/HistoricalDataModal.jsx";
+import EditAlertTemplateModal from "../Devices_contents/messageTempModal/EditAlertTemplateModal.jsx"; // 🔹 NEW IMPORT
 
 
 const Devices_contents = ({ isAdmin }) => {
@@ -54,12 +55,15 @@ const Devices_contents = ({ isAdmin }) => {
   const [showSmsAlert, setShowSmsAlert] = useState(false);
   const [showSmsAlertFailed, setShowSmsAlertFailed] = useState(false);
 
-  // New: auto-sms alert state + seen-tracker ref
-  const [autoSmsAlert, setAutoSmsAlert] = useState(null); // { sensorName, location, status }
+  // Auto-sms alert state + seen-tracker ref
+  const [autoSmsAlert, setAutoSmsAlert] = useState(null);
   const autoAlertSeenRef = useRef({});
 
-  // 🔹 New state for historical modal
+  // Historical modal state
   const [historicalModalSensor, setHistoricalModalSensor] = useState(null);
+
+  // 🔹 NEW: Edit alert template modal state
+  const [showEditAlertTemplate, setShowEditAlertTemplate] = useState(false);
 
 
   // ----------------------------
@@ -129,21 +133,20 @@ const Devices_contents = ({ isAdmin }) => {
   }, [devices]);
 
   // ----------------------------
-  // Realtime DB listener (alerts) - show auto SMS notification only for auto_sent alerts
+  // Realtime DB listener (alerts)
   // ----------------------------
   useEffect(() => {
     const alertsRef = ref(realtimeDB, "alerts");
     let initialized = false;
 
-    // perform a one-time read so we can ignore existing records
     get(alertsRef)
-      .catch(() => null) // ignore errors but still proceed
+      .catch(() => null)
       .then(() => {
         initialized = true;
       });
 
     const handleChildAdded = (snap) => {
-      if (!initialized) return; // ignore existing children on first load
+      if (!initialized) return;
       const alertObj = snap.val();
       const sensorName = snap.key;
       if (!alertObj) return;
@@ -160,7 +163,6 @@ const Devices_contents = ({ isAdmin }) => {
     };
 
     const handleChildChanged = (snap) => {
-      // child_changed won't fire for initial state, so no extra guard required
       const alertObj = snap.val();
       const sensorName = snap.key;
       if (!alertObj) return;
@@ -176,7 +178,6 @@ const Devices_contents = ({ isAdmin }) => {
       }
     };
 
-    // listen for newly added alerts (after initial load) and for updates
     onChildAdded(alertsRef, handleChildAdded);
     onChildChanged(alertsRef, handleChildChanged);
 
@@ -184,7 +185,6 @@ const Devices_contents = ({ isAdmin }) => {
       off(alertsRef, "child_added", handleChildAdded);
       off(alertsRef, "child_changed", handleChildChanged);
     };
-    // only run once on mount
   }, []);
 
   function addSensorTooltip() {
@@ -219,7 +219,7 @@ const Devices_contents = ({ isAdmin }) => {
       {showSmsAlert && <SmsAlertSuccess />}
       {showSmsAlertFailed && <SmsAlertFailed />}
 
-      {/* Auto SMS notification (only shown when auto-alert recorded in RTDB) */}
+      {/* Auto SMS notification */}
       {autoSmsAlert && (
         <AutoSmsAlertSuccess
           sensorName={autoSmsAlert.sensorName}
@@ -282,9 +282,11 @@ const Devices_contents = ({ isAdmin }) => {
 
                   {isAdmin && (
                     <>
+                      {/* 🔹 EDIT ALERT TEMPLATE BUTTON */}
                       <button
                         className="edit-notify-btn"
-                        title="Edit notification"// open edit-template modal
+                        title="Edit notification template"
+                        onClick={() => setShowEditAlertTemplate(true)}
                       >
                         <MdOutlineEditNotifications />
                       </button>
@@ -401,7 +403,6 @@ const Devices_contents = ({ isAdmin }) => {
                   </AreaChart>
                 </ResponsiveContainer>
 
-                {/* 🔹 Historical Data Icon */}
                 <LuChevronsLeftRight
                   className="chart-toggle-icon"
                   onClick={() => setHistoricalModalSensor(device.sensorName)}
@@ -420,7 +421,14 @@ const Devices_contents = ({ isAdmin }) => {
         />
       )}
 
-      {/* Edit Modal */}
+      {/* 🔹 EDIT ALERT TEMPLATE MODAL */}
+      {showEditAlertTemplate && (
+        <EditAlertTemplateModal
+          onClose={() => setShowEditAlertTemplate(false)}
+        />
+      )}
+
+      {/* Edit Device Modal */}
       {editingDevice && (
         <div className="modal-overlay" onClick={() => setEditingDevice(null)}>
           <div

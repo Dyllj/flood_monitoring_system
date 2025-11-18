@@ -484,7 +484,7 @@ body {
 
 
 #save_changes,
-#cancel_save,.unique-save-btn, .unique-cancel-btn, .message-cancel-btn, #save-template {
+#cancel_save,.unique-save-btn, .unique-cancel-btn{
   border: 1px solid #011627;
   padding: 8px 16px;
   margin-top: 2rem;
@@ -493,21 +493,21 @@ body {
   transition: all 0.3s ease;
 }
 
-#save_changes, .unique-save-btn, #save-template {
+#save_changes, .unique-save-btn {
   background: #28a745;
   color: white;
 }
 
-#save_changes:hover, .unique-save-btn:hover, #save-template:hover {
+#save_changes:hover, .unique-save-btn:hover {
   background-color: #1f512aff;
   transition: background-color .3s ease;
 }
 
-#cancel_save, .unique-cancel-btn, .message-cancel-btn {
+#cancel_save, .unique-cancel-btn {
   background: #dc3545;
 }
 
-#cancel_save:hover, .unique-cancel-btn:hover, .message-cancel-btn:hover {
+#cancel_save:hover, .unique-cancel-btn:hover {
    background-color: #56161cff;
   transition: background-color .3s ease;
 }
@@ -924,31 +924,5 @@ body {
 .chart-toggle-icon:hover {
   transform: scale(1.1);
   color: rgba(0, 0, 0, 0.7);
-}
-#edit-message-container{
-  width: 40%;
-  height: 60%;
-  margin: auto;
-}
-textarea{
-  width: 100%;
-  height: 50%;
-  resize: none;
-  padding: 10px;
-  font-size: 1rem;
-  border-radius: 8px;
-  border: 1px solid #ccc;
-  box-sizing: border-box;
-}
-textarea:focus {
-  outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 5px rgba(59, 130, 246, 0.5);
-}
-#edit-message-btn{
-  margin-top: 4rem;
-}
-#save-template, .message-cancel-btn{
-  margin-top: 2.5rem;
 }
 

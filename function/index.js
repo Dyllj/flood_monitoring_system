@@ -80,21 +80,55 @@ function getStatus(distance, device = {}) {
 }
 
 // --------------------
-// Build Flood Alert Message
+// 🔹 NEW: Load Alert Template from Firestore
 // --------------------
-function buildFloodAlertMessage(type, location, distance, status) {
+async function loadAlertTemplate() {
+  const firestoreDb = getFirestoreDb();
+  
+  // Default template (fallback)
+  const DEFAULT_TEMPLATE = `\${type.toUpperCase()} FLOOD ALERT
+Maayung Adlaw!
+Ang tubig sa \${location} naabot na sa lebel nga \${distance}m (\${status}).
+Pag-alerto ug pag-andam sa posibleng baha.
+Time: \${alertTime}
+- Sent by Molave Municipal Risk Reduction and Management Office`;
+
+  try {
+    const templateDoc = await firestoreDb.collection("settings").doc("alertTemplate").get();
+    
+    if (templateDoc.exists && templateDoc.data().template) {
+      return templateDoc.data().template;
+    }
+    
+    return DEFAULT_TEMPLATE;
+  } catch (err) {
+    console.error("⚠️ Failed to load template from Firestore, using default:", err.message);
+    return DEFAULT_TEMPLATE;
+  }
+}
+
+// --------------------
+// 🔹 UPDATED: Build Flood Alert Message with Dynamic Template
+// --------------------
+async function buildFloodAlertMessage(type, location, distance, status) {
   const alertTime = new Intl.DateTimeFormat("en-PH", {
     timeZone: "Asia/Manila",
     dateStyle: "short",
     timeStyle: "short",
   }).format(new Date());
 
-  return `${type.toUpperCase()} FLOOD ALERT
-Maayung Adlaw!
-Ang tubig sa ${location} naabot na sa lebel nga ${distance}m (${status}).
-Pag-alerto ug pag-andam sa posibleng baha.
-Time: ${alertTime}
-- Sent by Molave Municipal Risk Reduction and Management Office`;
+  // Load the template from Firestore
+  const template = await loadAlertTemplate();
+
+  // Replace placeholders with actual values
+  const message = template
+    .replace(/\$\{type\.toUpperCase\(\)\}/g, type.toUpperCase())
+    .replace(/\$\{location\}/g, location)
+    .replace(/\$\{distance\}/g, distance)
+    .replace(/\$\{status\}/g, status)
+    .replace(/\$\{alertTime\}/g, alertTime);
+
+  return message;
 }
 
 // ================================
@@ -123,7 +157,7 @@ exports.sendFloodAlertSMS = onCall(
       if (status !== "Critical") return;
 
       const location = manualLocation || device.location || "Unknown";
-      const message = buildFloodAlertMessage("Manual", location, roundedDistance, status);
+      const message = await buildFloodAlertMessage("Manual", location, roundedDistance, status);
 
       const personnelSnap = await firestoreDb.collection("Authorized_personnel").get();
       if (personnelSnap.empty) throw new HttpsError("not-found", "No authorized personnel found");
@@ -215,7 +249,7 @@ exports.autoFloodAlert = onValueWritten(
       const location = device.location || "Unknown";
       const sensorName = device.sensorName || deviceName;
 
-      if (device.status === "inactive") return; // skip inactive devices
+      if (device.status === "inactive") return;
 
       const lastAutoSmsSent = device.lastAutoSmsSent?.toMillis?.() || 0;
       const autoSmsCountToday = device.autoSmsCountToday || 0;
@@ -225,13 +259,13 @@ exports.autoFloodAlert = onValueWritten(
       let currentCount = autoSmsCountToday;
       if (autoSmsCountDate !== today) currentCount = 0;
 
-      const cooldown = 5 * 60 * 60 * 1000; // 5 hours
+      const cooldown = 5 * 60 * 60 * 1000;
       if (Date.now() - lastAutoSmsSent < cooldown || currentCount >= 3 || status === "Normal") return;
 
       const personnelSnap = await firestoreDb.collection("Authorized_personnel").get();
       if (personnelSnap.empty) return;
 
-      const message = buildFloodAlertMessage("Automatic", location, roundedDistance, status);
+      const message = await buildFloodAlertMessage("Automatic", location, roundedDistance, status);
 
       await Promise.all(
         personnelSnap.docs.map(async doc => {
@@ -282,7 +316,6 @@ exports.autoFloodAlert = onValueWritten(
 
 // ================================
 // Scheduled Device Status Check
-// Logs offline events reliably
 // ================================
 exports.checkDeviceActivity = onSchedule(
   { schedule: "every 2 minutes", region: "asia-southeast1" },
@@ -302,7 +335,7 @@ const toggleDeviceStatus = async (doc) => {
   const data = doc.data();
   const sensorId = doc.id;
   const now = Date.now();
-  const THRESHOLD = 1 * 60 * 1000; // 1 minute
+  const THRESHOLD = 1 * 60 * 1000;
   const lastUpdate = data.lastUpdate?.toMillis?.() || 0;
 
   const offlineLogsRef = firestoreDb
@@ -313,7 +346,7 @@ const toggleDeviceStatus = async (doc) => {
   if (now - lastUpdate > THRESHOLD && data.status !== "inactive") {
     await doc.ref.update({ 
       status: "inactive",
-      onlineLogged: false // reset online log flag
+      onlineLogged: false
     });
 
     await offlineLogsRef.add({
@@ -328,7 +361,7 @@ const toggleDeviceStatus = async (doc) => {
 };
 
 // ================================
-// Device Readings Logger (Strict Online Logs)
+// Device Readings Logger
 // ================================
 exports.logDeviceReadings = onValueWritten(
   { ref: "/realtime/{sensorId}", region: "asia-southeast1" },
@@ -352,7 +385,6 @@ exports.logDeviceReadings = onValueWritten(
       if (distance > deviceData.normalLevel && distance < deviceData.alertLevel) waterLevelStatus = "Elevated";
       else if (distance >= deviceData.alertLevel) waterLevelStatus = "Critical";
 
-      // --- ONLINE LOGS ---
       if (!deviceData.onlineLogged) {
         const onlineLogsRef = firestoreDb
           .collection("devices-logs")
@@ -370,7 +402,6 @@ exports.logDeviceReadings = onValueWritten(
         console.log(`✅ ${sensorId} → ACTIVE (logged online event)`);
       }
 
-      // --- NORMAL READINGS LOGS ---
       const logsRef = firestoreDb.collection("devices-logs").doc(sensorId).collection("logs");
       const latestLogSnap = await logsRef.orderBy("lastUpdate", "desc").limit(1).get();
       let shouldLog = true;
