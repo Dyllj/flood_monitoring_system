@@ -182,7 +182,7 @@ Time: \${alertTime}
           </div>
         </div>
 
-        <div className="modal-actions">
+        <div className="temp-modal-actions">
           <button onClick={handleSave} disabled={saving} className="save-message-btn">
             {saving ? "Saving..." : "Save Template"}
           </button>

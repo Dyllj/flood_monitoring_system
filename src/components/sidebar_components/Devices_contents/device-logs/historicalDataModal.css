@@ -99,6 +99,19 @@
   font-weight: 600;
 }
 
+.grid-item h3 svg{
+  margin: 0.5rem 1rem 0 0;
+  cursor: pointer;
+}
+.grid-item h3 svg:hover{
+  color: #007bff;
+  transform: scale(1.1);
+}
+/* .filterIcon {
+  background: red;
+  margin: 0.5rem 1rem 0 0;
+} */
+
 .area-chart-wrapper,
 .pie-chart-wrapper {
   width: 100%;
@@ -248,4 +261,132 @@
   color: white;
   margin: 0.2rem 0;
   font-size: 0.85rem;
+}
+
+/* Clickable hint for chart wrapper */
+.area-chart-wrapper {
+  cursor: zoom-in;
+  transition: transform 160ms ease;
+}
+.area-chart-wrapper:active { transform: scale(0.997); }
+
+/* Enlarged chart overlay */
+.chart-enlarge-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.65);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.chart-enlarge-container {
+  width: min(1200px, 96%);
+  max-height: 92vh;
+  background: #fff;
+  border-radius: 10px;
+  padding: 12px 14px 18px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.45);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Close icon for enlarged view */
+.chart-enlarge-close {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  font-size: 1.4rem;
+  cursor: pointer;
+  color: #444;
+  z-index: 5;
+}
+.chart-enlarge-close:hover { color: #000; transform: scale(1.05); }
+
+/* inner container to hold the chart */
+.chart-enlarge-inner {
+  width: 100%;
+  height: calc(70vh - 56px);
+}
+
+/* responsive fallback */
+@media (max-width: 700px) {
+  .chart-enlarge-container { width: 100%; padding: 8px; border-radius: 6px; }
+  .chart-enlarge-inner { height: calc(60vh - 48px); }
+}
+.filter-historical-data-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: rgba(0,0,0,0.5);
+  z-index: 1000;
+}
+.filter-historical-data-modal {
+  background: #fff;
+  border-radius: 12px;
+  padding: 1.5rem;
+  max-width: 20rem;
+  width: 90%;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+  position: relative;
+  animation: slideDown 0.3s ease;
+}
+.filter-historical-data-modal h4 {
+  text-align: center;
+  margin-bottom: 0.5rem;
+}
+.filter-row {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 1rem;
+}
+.filter-row label {
+  font-weight: 600;
+  margin-bottom: 0.2rem;
+  text-align: center;
+}
+.filter-row input {
+  display: block;
+  align-self: center;
+  padding: 0.4rem;
+  width: 15rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+.filter-save, .filter-cancel, .filter-reset {
+  padding: 0.6rem 1.2rem;
+  font-size: 0.8rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin: 0 0.3rem;
+}
+.filter-save svg, .filter-cancel svg, .filter-reset svg {
+  vertical-align: middle;
+  font-size: 1.2rem;
+}
+.filter-save {
+  background-color: #28a745;
+  color: white;
+}
+.filter-save:hover {
+  background-color: #1f512aff;
+}
+.filter-cancel {
+  background-color: #dc3545;
+}
+.filter-cancel:hover {
+  background-color: #56161cff;
+}
+.filter-reset {
+  background-color: #7f8c8d;
+  color: white;
+}
+.filter-reset:hover {
+  background-color: #5a6268;
 }

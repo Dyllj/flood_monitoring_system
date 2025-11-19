@@ -3,6 +3,10 @@ import { collection, getDocs } from "firebase/firestore";
 import { db } from "../../../../auth/firebase_auth";
 import { HiMiniXMark } from "react-icons/hi2";
 import { TbFilterCog } from "react-icons/tb";
+import { FaCheck } from "react-icons/fa6";
+import { TiCancel } from "react-icons/ti";
+import { GrPowerReset } from "react-icons/gr";
+
 
 import {
   AreaChart,
@@ -35,11 +39,24 @@ const CustomTooltip = ({ active, payload, label }) => {
 
 const HistoricalDataModal = ({ sensorId, onClose }) => {
   const [filteredLogs, setFilteredLogs] = useState([]);
+  const [fullLogs, setFullLogs] = useState([]); // store original full set for reset/filtering
   const [combinedDeviceLogs, setCombinedDeviceLogs] = useState([]);
   const [alertLogs, setAlertLogs] = useState([]);
+  const [fullAlertLogs, setFullAlertLogs] = useState([]); // full alert logs for alert filtering
   const [loading, setLoading] = useState(true);
   const [maxMetadata, setMaxMetadata] = useState({});
 
+  // Filter modal state (for historical readings)
+  const [showFilterModal, setShowFilterModal] = useState(false);
+  const [filterStart, setFilterStart] = useState("");
+  const [filterEnd, setFilterEnd] = useState("");
+  const [filterError, setFilterError] = useState("");
+
+  // Alert filter modal state (for SMS Alert Frequency)
+  const [showAlertFilterModal, setShowAlertFilterModal] = useState(false);
+  const [alertFilterStart, setAlertFilterStart] = useState("");
+  const [alertFilterEnd, setAlertFilterEnd] = useState("");
+  const [alertFilterError, setAlertFilterError] = useState("");
 
   useEffect(() => {
     const fetchAllLogs = async () => {
@@ -55,11 +72,12 @@ const HistoricalDataModal = ({ sensorId, onClose }) => {
               item.lastUpdate?.toDate ? item.lastUpdate.toDate() : item.lastUpdate
             );
 
-            setMaxMetadata({
-              maxHeight: item.maxHeight,
-              normalLevel: item.normalLevel,
-              alertLevel: item.alertLevel,
-            });
+            // Keep latest metadata - assume consistent across docs
+            setMaxMetadata((prev) => ({
+              maxHeight: item.maxHeight ?? prev.maxHeight,
+              normalLevel: item.normalLevel ?? prev.normalLevel,
+              alertLevel: item.alertLevel ?? prev.alertLevel,
+            }));
 
             return { dateObj, distance: item.distance };
           })
@@ -85,7 +103,8 @@ const HistoricalDataModal = ({ sensorId, onClose }) => {
           }
         });
 
-
+        // Save full logs and initialise displayed filtered logs
+        setFullLogs(uniqueLogs);
         setFilteredLogs(uniqueLogs);
 
         // 2. Fetch online/offline logs
@@ -126,13 +145,17 @@ const HistoricalDataModal = ({ sensorId, onClose }) => {
 
         const alertMap = {};
         sensorAlerts.forEach((alert) => {
-          const dateKey = new Date(alert.timestamp?.toDate ? alert.timestamp.toDate() : alert.timestamp).toLocaleString();
-          if (!alertMap[dateKey]) alertMap[dateKey] = { time: dateKey, Automatic: 0, Manual: 0 };
+          const dateObj = new Date(alert.timestamp?.toDate ? alert.timestamp.toDate() : alert.timestamp);
+          const dateKey = dateObj.toLocaleString();
+          const ts = dateObj.getTime();
+          if (!alertMap[dateKey]) alertMap[dateKey] = { time: dateKey, timestamp: ts, Automatic: 0, Manual: 0 };
           if (alert.type === "Automatic") alertMap[dateKey].Automatic += 1;
           else if (alert.type === "Manual") alertMap[dateKey].Manual += 1;
         });
 
-        setAlertLogs(Object.values(alertMap).sort((a, b) => new Date(a.time) - new Date(b.time)));
+        const processedAlerts = Object.values(alertMap).sort((a, b) => a.timestamp - b.timestamp);
+        setFullAlertLogs(processedAlerts);
+        setAlertLogs(processedAlerts);
 
         setLoading(false);
       } catch (err) {
@@ -147,6 +170,129 @@ const HistoricalDataModal = ({ sensorId, onClose }) => {
   if (loading) return <div className="modal">Loading...</div>;
 
   const yDomain = [0, maxMetadata.maxHeight || 7];
+
+  // Open filter modal and prefill current min/max from fullLogs (historical readings)
+  const openFilterModal = () => {
+    if (!fullLogs || fullLogs.length === 0) {
+      setFilterStart("");
+      setFilterEnd("");
+    } else {
+      const timestamps = fullLogs.map((l) => l.timestamp).sort((a, b) => a - b);
+      const min = new Date(timestamps[0]);
+      const max = new Date(timestamps[timestamps.length - 1]);
+      // datetime-local expects format "YYYY-MM-DDTHH:mm"
+      const toLocalInput = (d) => d.toISOString().slice(0, 16);
+      setFilterStart(toLocalInput(min));
+      setFilterEnd(toLocalInput(max));
+    }
+    setFilterError("");
+    setShowFilterModal(true);
+  };
+
+  const closeFilterModal = () => {
+    setShowFilterModal(false);
+    setFilterError("");
+  };
+
+  const handleApplyFilter = () => {
+    if (!filterStart || !filterEnd) {
+      setFilterError("Both start and end date/time are required.");
+      return;
+    }
+    const startTs = new Date(filterStart).getTime();
+    const endTs = new Date(filterEnd).getTime();
+    if (isNaN(startTs) || isNaN(endTs) || startTs > endTs) {
+      setFilterError("Invalid date range. Ensure start is before end.");
+      return;
+    }
+
+    const filtered = fullLogs.filter((l) => l.timestamp >= startTs && l.timestamp <= endTs);
+    setFilteredLogs(filtered);
+    setShowFilterModal(false);
+  };
+
+  const handleCancelFilter = () => {
+    // Do not change current filteredLogs, just close
+    closeFilterModal();
+  };
+
+  const handleResetFilter = () => {
+    setFilteredLogs(fullLogs);
+    // also reset modal inputs to full range if open
+    if (fullLogs && fullLogs.length > 0) {
+      const timestamps = fullLogs.map((l) => l.timestamp).sort((a, b) => a - b);
+      const min = new Date(timestamps[0]);
+      const max = new Date(timestamps[timestamps.length - 1]);
+      const toLocalInput = (d) => d.toISOString().slice(0, 16);
+      setFilterStart(toLocalInput(min));
+      setFilterEnd(toLocalInput(max));
+    } else {
+      setFilterStart("");
+      setFilterEnd("");
+    }
+    setFilterError("");
+    setShowFilterModal(false);
+  };
+
+  // Alert filter functions (for SMS Alert Frequency chart only)
+  const openAlertFilterModal = () => {
+    if (!fullAlertLogs || fullAlertLogs.length === 0) {
+      setAlertFilterStart("");
+      setAlertFilterEnd("");
+    } else {
+      const timestamps = fullAlertLogs.map((l) => l.timestamp).sort((a, b) => a - b);
+      const min = new Date(timestamps[0]);
+      const max = new Date(timestamps[timestamps.length - 1]);
+      const toLocalInput = (d) => d.toISOString().slice(0, 16);
+      setAlertFilterStart(toLocalInput(min));
+      setAlertFilterEnd(toLocalInput(max));
+    }
+    setAlertFilterError("");
+    setShowAlertFilterModal(true);
+  };
+
+  const closeAlertFilterModal = () => {
+    setShowAlertFilterModal(false);
+    setAlertFilterError("");
+  };
+
+  const handleApplyAlertFilter = () => {
+    if (!alertFilterStart || !alertFilterEnd) {
+      setAlertFilterError("Both start and end date/time are required.");
+      return;
+    }
+    const startTs = new Date(alertFilterStart).getTime();
+    const endTs = new Date(alertFilterEnd).getTime();
+    if (isNaN(startTs) || isNaN(endTs) || startTs > endTs) {
+      setAlertFilterError("Invalid date range. Ensure start is before end.");
+      return;
+    }
+
+    const filtered = fullAlertLogs.filter((l) => l.timestamp >= startTs && l.timestamp <= endTs);
+    setAlertLogs(filtered);
+    setShowAlertFilterModal(false);
+  };
+
+  const handleCancelAlertFilter = () => {
+    closeAlertFilterModal();
+  };
+
+  const handleResetAlertFilter = () => {
+    setAlertLogs(fullAlertLogs);
+    if (fullAlertLogs && fullAlertLogs.length > 0) {
+      const timestamps = fullAlertLogs.map((l) => l.timestamp).sort((a, b) => a - b);
+      const min = new Date(timestamps[0]);
+      const max = new Date(timestamps[timestamps.length - 1]);
+      const toLocalInput = (d) => d.toISOString().slice(0, 16);
+      setAlertFilterStart(toLocalInput(min));
+      setAlertFilterEnd(toLocalInput(max));
+    } else {
+      setAlertFilterStart("");
+      setAlertFilterEnd("");
+    }
+    setAlertFilterError("");
+    setShowAlertFilterModal(false);
+  };
 
   return (
     <div className="modal-overlay" id="historical-data-overlay" onClick={onClose}>
@@ -164,7 +310,48 @@ const HistoricalDataModal = ({ sensorId, onClose }) => {
           <div className="charts-grid">
             {/* Historical Device Data */}
             <div className="grid-item">
-              <h3>Historical Readings Data</h3>
+              <h3>
+                <TbFilterCog className="filterIcon" onClick={openFilterModal}/>
+                Historical Readings Data
+              </h3>
+
+              {/* Filter modal overlay (only affects chart) */}
+              {showFilterModal && (
+                <div className="filter-historical-data-overlay" onClick={closeFilterModal}>
+                  <div className="filter-historical-data-modal" onClick={(e) => e.stopPropagation()}>
+                    <h4>Filter Historical Data (Date & Time)</h4>
+                    <div className="filter-row">
+                      <label>Start</label>
+                      <input
+                        type="datetime-local"
+                        value={filterStart}
+                        onChange={(e) => setFilterStart(e.target.value)}
+                      />
+                    </div>
+                    <div className="filter-row">
+                      <label>End</label>
+                      <input
+                        type="datetime-local"
+                        value={filterEnd}
+                        onChange={(e) => setFilterEnd(e.target.value)}
+                      />
+                    </div>
+                    {filterError && <p className="filter-error">{filterError}</p>}
+                    <div className="filter-actions">
+                      <button className="filter-save" onClick={handleApplyFilter} title="Save filter">
+                        <FaCheck />
+                      </button>
+                      <button className="filter-cancel" onClick={handleCancelFilter} title="Cancel">
+                        <TiCancel />
+                      </button>
+                      <button className="filter-reset" onClick={handleResetFilter} title="Reset filter">
+                        <GrPowerReset />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="area-chart-wrapper">
                 <ResponsiveContainer width="100%" height={250}>
                   <AreaChart data={filteredLogs}>
@@ -188,7 +375,48 @@ const HistoricalDataModal = ({ sensorId, onClose }) => {
 
             {/* Alert Frequency Chart (Automatic / Manual) */}
             <div className="grid-item">
-              <h3>SMS Alert Frequency</h3>
+              <h3>
+                <TbFilterCog className="filterIcon" onClick={openAlertFilterModal}/>
+                SMS Alert Frequency
+              </h3>
+
+              {/* Alert filter modal (only affects SMS Alert Frequency chart) */}
+              {showAlertFilterModal && (
+                <div className="filter-historical-data-overlay" onClick={closeAlertFilterModal}>
+                  <div className="filter-historical-data-modal" onClick={(e) => e.stopPropagation()}>
+                    <h4>Filter SMS Alerts (Date & Time)</h4>
+                    <div className="filter-row">
+                      <label>Start</label>
+                      <input
+                        type="datetime-local"
+                        value={alertFilterStart}
+                        onChange={(e) => setAlertFilterStart(e.target.value)}
+                      />
+                    </div>
+                    <div className="filter-row">
+                      <label>End</label>
+                      <input
+                        type="datetime-local"
+                        value={alertFilterEnd}
+                        onChange={(e) => setAlertFilterEnd(e.target.value)}
+                      />
+                    </div>
+                    {alertFilterError && <p className="filter-error">{alertFilterError}</p>}
+                    <div className="filter-actions">
+                      <button className="filter-save" onClick={handleApplyAlertFilter} title="Save filter">
+                        <FaCheck />
+                      </button>
+                      <button className="filter-cancel" onClick={handleCancelAlertFilter} title="Cancel">
+                        <TiCancel />
+                      </button>
+                      <button className="filter-reset" onClick={handleResetAlertFilter} title="Reset filter">
+                        <GrPowerReset />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="area-chart-wrapper">
                 <ResponsiveContainer width="100%" height={250}>
                   <AreaChart data={alertLogs}>
@@ -199,7 +427,7 @@ const HistoricalDataModal = ({ sensorId, onClose }) => {
                       axisLine={{ stroke: "rgba(0,0,0,0.5)" }} 
                       tickLine={false} 
                     />
-                    <YAxis />
+                    <YAxis domain={[0, 50]} />
                     <Tooltip content={<CustomTooltip />} />
                     <Legend />
                     <Area type="monotone" dataKey="Automatic" stroke="#00C853" fill="#00C85333" />
