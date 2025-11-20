@@ -1,5 +1,5 @@
-import './App.css'
-import Sidebar from './components/sidebar/Sidebar'
+import './App.css';
+import Sidebar from './components/sidebar/Sidebar';
 import { RxHamburgerMenu } from "react-icons/rx";
 import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
@@ -16,6 +16,7 @@ import { FaCheck } from "react-icons/fa6";
 import { TiCancel } from "react-icons/ti";
 import { GrPowerReset } from "react-icons/gr";
 import { RiAccountCircleLine } from "react-icons/ri";
+import { FaEye, FaEyeSlash } from "react-icons/fa";
 
 import {
   onAuthStateChanged,
@@ -34,6 +35,8 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [showAdminPopup, setShowAdminPopup] = useState(false);
   const [showModifyModal, setShowModifyModal] = useState(false);
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
 
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [showFailedToast, setShowFailedToast] = useState(false);
@@ -241,10 +244,30 @@ function App() {
               <input type="email" placeholder="Enter new email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} />
 
               <h3>Current Password</h3>
-              <input type="password" placeholder="Enter current password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} />
+              <div className="password-input-wrapper">
+                <input
+                  type={showCurrentPassword ? "text" : "password"}
+                  placeholder="Enter current password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                />
+                <span className="password-toggle-icon" onClick={() => setShowCurrentPassword(!showCurrentPassword)}>
+                  {showCurrentPassword ? <FaEyeSlash /> : <FaEye />}
+                </span>
+              </div>
 
               <h3>New Password</h3>
-              <input type="password" placeholder="Enter new password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+              <div className="password-input-wrapper">
+                <input
+                  type={showNewPassword ? "text" : "password"}
+                  placeholder="Enter new password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                />
+                <span className="password-toggle-icon" onClick={() => setShowNewPassword(!showNewPassword)}>
+                  {showNewPassword ? <FaEyeSlash /> : <FaEye />}
+                </span>
+              </div>
             </div>
 
             <div className="modify-acc-btn">
@@ -271,7 +294,6 @@ function App() {
       {showFailedToast && (
         <AdminModifyFailed onClose={() => setShowFailedToast(false)} message={failedMessage} />
       )}
-
     </Router>
   );
 }

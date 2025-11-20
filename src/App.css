@@ -270,6 +270,30 @@ header svg {
 .modify-reset:hover {
   background-color: #5a6268;
 }
+.password-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-input-wrapper input {
+  width: 100%;
+  padding-right: 35px; /* space for icon */
+  box-sizing: border-box;
+}
+
+.password-toggle-icon {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  color: #555;
+  display: flex;
+  align-items: center;
+}
+
+
 @media (max-width: 900px) {
   h1 {
     font-size: 1.5rem;
@@ -312,13 +336,14 @@ header svg {
   header svg {
     font-size: 1.4rem;
     margin-left: 0.3rem;
+    margin-top: 0.4rem;
   }
 
   .login {
     width: 4.6em;
     height: 1.6em;
     font-size: 14px;
-    top: -0.5rem;
+    top: -0.6rem;
   }
 
   .login h2 {
@@ -331,9 +356,19 @@ header svg {
     right: 0.4rem;
     top: 0.35rem;
     height: 1.2rem;
+    font-size: 5rem;
     opacity: 0.9;
   }
+  .adminAcc {
+    width: 2.5rem;
+    height: 2.5rem;
+  
+  }
+  .adminAcc svg {
+    font-size: 1.5rem;
+  }
 }
+
 
 @media (max-width: 600px) {
   /* Mobile: show compact circular logout/login icon only, keep transition on .login */
