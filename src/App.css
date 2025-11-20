@@ -29,7 +29,7 @@ header svg {
   font-size: 2rem;
   cursor: pointer;
 }
-.login {
+.login, .adminAcc {
   display: flex;
   background: transparent;
   padding: 5px;
@@ -42,6 +42,21 @@ header svg {
   border-radius: 0.4em;
   top: -0.2rem;
   text-decoration: none;
+}
+.adminAcc {
+  width: 3rem;
+  height: 3rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.adminAcc svg {
+  top: 0;
+  transition: all 0.3s ease;
+}
+.adminAcc svg:hover {
+  color: #0056b3;
+  transform: scale(1.1);
 }
 
 .login svg {
@@ -79,7 +94,7 @@ header svg {
   position: fixed;
   top: 0;
   left: 0;
-  background: rgba(0, 0, 0, 0.5);
+
   display: flex;
   justify-content: center;
   align-items: center;
@@ -95,7 +110,166 @@ header svg {
   position: relative;
   height: auto;
 }
+/* Overlay covers only the screen to detect outside click */
+.admin-popup-overlay {
+  position: fixed;
+  inset: 0;
+  background: transparent; /* invisible overlay */
+  z-index: 2000;
+}
 
+/* Popup box positioned near the top-right where the button is */
+.admin-popup {
+  position: absolute;
+  top: 70px; /* push down right under header */
+  right: 20px; /* align with admin button */
+  width: 220px;
+
+  background: white;
+  padding: 15px;
+  border-radius: 10px;
+  box-shadow: 0px 4px 10px rgba(0,0,0,0.2);
+  z-index: 2001;
+}
+
+.admin-popup h3 {
+  margin: 0.3rem 0 10px 0;
+  font-size: 1rem;
+}
+
+.admin-popup p {
+  margin-bottom: 15px;
+  font-size: 14px;
+  opacity: 0.8;
+}
+
+.popup-btn {
+  width: 100%;
+  padding: 8px;
+  margin-bottom: 8px;
+  background: #011627;
+  color: white;
+  border: 1px solid #011627;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.popup-btn:hover {
+  background: #246193ff;
+}
+
+.admin-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.admin-header button {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 2rem;
+  color: #444;
+  transition: all 0.3s ease;
+}
+.admin-header button:hover {
+  color: red;
+}
+/* Modify Account Modal */
+#modify-account-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2500;
+}
+
+#modify-account-container {
+  background: white;
+  width: 32rem;
+  height: 36rem;
+  padding: 1rem;
+  border-radius: 12px;
+  box-shadow: 0px 4px 10px rgba(0,0,0,0.25);
+}
+
+.modify-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modify-header button {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #011627;
+  font-size: 1.5rem;
+  width: 2rem;
+  height: 2rem;
+  transition: all 0.3s ease;
+}
+.modify-header button:hover {
+  color: red;
+}
+.current-acc {
+  margin: 1rem 0;
+  font-size: 0.9rem;
+  color: #555;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #ccc;
+}
+.updated-acc {
+  margin-bottom: 1rem;
+  padding-bottom: 3rem;
+  border-bottom: 1px solid #ccc;
+}
+.updated-acc input {
+  width: 100%;
+  padding: 0.5rem;
+  margin-top: 0.3rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 1rem;
+}
+.modify-acc-btn {
+  display: flex;
+  justify-content: space-evenly;
+  margin-top: 2rem;
+}
+
+.modify-save, .modify-cancel, .modify-reset {
+  padding: 0.6rem 1.2rem;
+  font-size: 1.2rem;
+  border: 1px solid #011627;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+.modify-save {
+  background-color: #28a745;
+  color: white;
+}
+.modify-save:hover {
+  background-color: #1f512aff;
+}
+.modify-cancel {
+  background-color: #dc3545;
+  color: white;
+}
+.modify-cancel:hover {
+  background-color: #56161cff;
+}
+.modify-reset {
+  background-color: #7f8c8d;
+  color: white;
+}
+.modify-reset:hover {
+  background-color: #5a6268;
+}
 @media (max-width: 900px) {
   h1 {
     font-size: 1.5rem;
