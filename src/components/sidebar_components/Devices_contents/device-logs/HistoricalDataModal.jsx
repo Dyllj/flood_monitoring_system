@@ -39,14 +39,15 @@ const CustomTooltip = ({ active, payload, label }) => {
 
 const HistoricalDataModal = ({ sensorId, onClose }) => {
   const [filteredLogs, setFilteredLogs] = useState([]);
-  const [fullLogs, setFullLogs] = useState([]); // store original full set for reset/filtering
+  const [fullLogs, setFullLogs] = useState([]);
+  const [filteredTableLogs, setFilteredTableLogs] = useState([]);
   const [combinedDeviceLogs, setCombinedDeviceLogs] = useState([]);
   const [alertLogs, setAlertLogs] = useState([]);
-  const [fullAlertLogs, setFullAlertLogs] = useState([]); // full alert logs for alert filtering
+  const [fullAlertLogs, setFullAlertLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [maxMetadata, setMaxMetadata] = useState({});
 
-  // Filter modal state (for historical readings)
+  // Filter modal state (for historical readings CHART)
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [filterStart, setFilterStart] = useState("");
   const [filterEnd, setFilterEnd] = useState("");
@@ -57,6 +58,12 @@ const HistoricalDataModal = ({ sensorId, onClose }) => {
   const [alertFilterStart, setAlertFilterStart] = useState("");
   const [alertFilterEnd, setAlertFilterEnd] = useState("");
   const [alertFilterError, setAlertFilterError] = useState("");
+
+  // Filter modal state (for historical readings TABLE)
+  const [showTableFilterModal, setShowTableFilterModal] = useState(false);
+  const [tableFilterStart, setTableFilterStart] = useState("");
+  const [tableFilterEnd, setTableFilterEnd] = useState("");
+  const [tableFilterError, setTableFilterError] = useState("");
 
   useEffect(() => {
     const fetchAllLogs = async () => {
@@ -90,13 +97,20 @@ const HistoricalDataModal = ({ sensorId, onClose }) => {
           const key = `${log.dateObj.getFullYear()}-${log.dateObj.getMonth()}-${log.dateObj.getDate()}-${log.dateObj.getHours()}-${log.dateObj.getMinutes()}`;
           if (!seenMinutes.has(key)) {
             seenMinutes.add(key);
+            
+            // Format date as MM/DD/YY HH:MM AM/PM
+            const month = String(log.dateObj.getMonth() + 1).padStart(2, '0');
+            const day = String(log.dateObj.getDate()).padStart(2, '0');
+            const year = String(log.dateObj.getFullYear()).slice(-2);
+            let hours = log.dateObj.getHours();
+            const minutes = String(log.dateObj.getMinutes()).padStart(2, '0');
+            const ampm = hours >= 12 ? 'PM' : 'AM';
+            hours = hours % 12;
+            hours = hours ? hours : 12; // 0 should be 12
+            const formattedDate = `${month}/${day}/${year} ${hours}:${minutes} ${ampm}`;
+            
             uniqueLogs.push({
-              date: log.dateObj.toLocaleString("en-US", {
-                month: "short",
-                day: "numeric",
-                hour: "numeric",
-                minute: "2-digit",
-              }),
+              date: formattedDate,
               timestamp: log.dateObj.getTime(),
               distance: log.distance,
             });
@@ -106,6 +120,7 @@ const HistoricalDataModal = ({ sensorId, onClose }) => {
         // Save full logs and initialise displayed filtered logs
         setFullLogs(uniqueLogs);
         setFilteredLogs(uniqueLogs);
+        setFilteredTableLogs(uniqueLogs);
 
         // 2. Fetch online/offline logs
         const onlineRef = collection(db, "devices-logs", sensorId, "device-online-logs");
@@ -171,7 +186,7 @@ const HistoricalDataModal = ({ sensorId, onClose }) => {
 
   const yDomain = [0, maxMetadata.maxHeight || 7];
 
-  // Open filter modal and prefill current min/max from fullLogs (historical readings)
+  // Open filter modal and prefill current min/max from fullLogs (historical readings CHART)
   const openFilterModal = () => {
     if (!fullLogs || fullLogs.length === 0) {
       setFilterStart("");
@@ -180,7 +195,6 @@ const HistoricalDataModal = ({ sensorId, onClose }) => {
       const timestamps = fullLogs.map((l) => l.timestamp).sort((a, b) => a - b);
       const min = new Date(timestamps[0]);
       const max = new Date(timestamps[timestamps.length - 1]);
-      // datetime-local expects format "YYYY-MM-DDTHH:mm"
       const toLocalInput = (d) => d.toISOString().slice(0, 16);
       setFilterStart(toLocalInput(min));
       setFilterEnd(toLocalInput(max));
@@ -212,13 +226,11 @@ const HistoricalDataModal = ({ sensorId, onClose }) => {
   };
 
   const handleCancelFilter = () => {
-    // Do not change current filteredLogs, just close
     closeFilterModal();
   };
 
   const handleResetFilter = () => {
     setFilteredLogs(fullLogs);
-    // also reset modal inputs to full range if open
     if (fullLogs && fullLogs.length > 0) {
       const timestamps = fullLogs.map((l) => l.timestamp).sort((a, b) => a - b);
       const min = new Date(timestamps[0]);
@@ -234,7 +246,7 @@ const HistoricalDataModal = ({ sensorId, onClose }) => {
     setShowFilterModal(false);
   };
 
-  // Alert filter functions (for SMS Alert Frequency chart only)
+  // Alert filter functions (for SMS Alert Frequency chart)
   const openAlertFilterModal = () => {
     if (!fullAlertLogs || fullAlertLogs.length === 0) {
       setAlertFilterStart("");
@@ -294,11 +306,70 @@ const HistoricalDataModal = ({ sensorId, onClose }) => {
     setShowAlertFilterModal(false);
   };
 
+  // Table filter functions (for Historical Data TABLE)
+  const openTableFilterModal = () => {
+    if (!fullLogs || fullLogs.length === 0) {
+      setTableFilterStart("");
+      setTableFilterEnd("");
+    } else {
+      const timestamps = fullLogs.map((l) => l.timestamp).sort((a, b) => a - b);
+      const min = new Date(timestamps[0]);
+      const max = new Date(timestamps[timestamps.length - 1]);
+      const toLocalInput = (d) => d.toISOString().slice(0, 16);
+      setTableFilterStart(toLocalInput(min));
+      setTableFilterEnd(toLocalInput(max));
+    }
+    setTableFilterError("");
+    setShowTableFilterModal(true);
+  };
+
+  const closeTableFilterModal = () => {
+    setShowTableFilterModal(false);
+    setTableFilterError("");
+  };
+
+  const handleApplyTableFilter = () => {
+    if (!tableFilterStart || !tableFilterEnd) {
+      setTableFilterError("Both start and end date/time are required.");
+      return;
+    }
+    const startTs = new Date(tableFilterStart).getTime();
+    const endTs = new Date(tableFilterEnd).getTime();
+    if (isNaN(startTs) || isNaN(endTs) || startTs > endTs) {
+      setTableFilterError("Invalid date range. Ensure start is before end.");
+      return;
+    }
+
+    const filtered = fullLogs.filter((l) => l.timestamp >= startTs && l.timestamp <= endTs);
+    setFilteredTableLogs(filtered);
+    setShowTableFilterModal(false);
+  };
+
+  const handleCancelTableFilter = () => {
+    closeTableFilterModal();
+  };
+
+  const handleResetTableFilter = () => {
+    setFilteredTableLogs(fullLogs);
+    if (fullLogs && fullLogs.length > 0) {
+      const timestamps = fullLogs.map((l) => l.timestamp).sort((a, b) => a - b);
+      const min = new Date(timestamps[0]);
+      const max = new Date(timestamps[timestamps.length - 1]);
+      const toLocalInput = (d) => d.toISOString().slice(0, 16);
+      setTableFilterStart(toLocalInput(min));
+      setTableFilterEnd(toLocalInput(max));
+    } else {
+      setTableFilterStart("");
+      setTableFilterEnd("");
+    }
+    setTableFilterError("");
+    setShowTableFilterModal(false);
+  };
+
   return (
     <div className="modal-overlay" id="historical-data-overlay" onClick={onClose}>
       <div className="modal-container" id="historical-data-container" onClick={(e) => e.stopPropagation()}>
         <HiMiniXMark className="modal-close-icon" onClick={onClose} />
-
 
         <div className="history-container">
           <h2 id="history-title">{sensorId} Historical Data</h2>
@@ -308,18 +379,18 @@ const HistoricalDataModal = ({ sensorId, onClose }) => {
           <p>No historical data.</p>
         ) : (
           <div className="charts-grid">
-            {/* Historical Device Data */}
+            {/* Historical Device Data CHART */}
             <div className="grid-item">
               <h3>
                 <TbFilterCog className="filterIcon" onClick={openFilterModal}/>
-                Historical Readings Data
+                Historical Data Chart
               </h3>
 
-              {/* Filter modal overlay (only affects chart) */}
+              {/* Filter modal overlay (only affects CHART) */}
               {showFilterModal && (
                 <div className="filter-historical-data-overlay" onClick={closeFilterModal}>
                   <div className="filter-historical-data-modal" onClick={(e) => e.stopPropagation()}>
-                    <h4>Filter Historical Data (Date & Time)</h4>
+                    <h4>Filter Historical Data Chart (Date & Time)</h4>
                     <div className="filter-row">
                       <label>Start</label>
                       <input
@@ -437,42 +508,105 @@ const HistoricalDataModal = ({ sensorId, onClose }) => {
               </div>
             </div>
 
-          {/* Offline Logs Table */}
+          {/* Historical Readings Data TABLE */}
           <div className="grid-item">
-            <h3>Offline Logs</h3>
+            <h3>
+              <TbFilterCog className="filterIcon" onClick={openTableFilterModal}/>
+              Historical Data Table
+            </h3>
+
+            {/* Table filter modal (only affects Historical Data TABLE) */}
+            {showTableFilterModal && (
+              <div className="filter-historical-data-overlay" onClick={closeTableFilterModal}>
+                <div className="filter-historical-data-modal" onClick={(e) => e.stopPropagation()}>
+                  <h4>Filter Historical Data Table (Date & Time)</h4>
+                  <div className="filter-row">
+                    <label>Start</label>
+                    <input
+                      type="datetime-local"
+                      value={tableFilterStart}
+                      onChange={(e) => setTableFilterStart(e.target.value)}
+                    />
+                  </div>
+                  <div className="filter-row">
+                    <label>End</label>
+                    <input
+                      type="datetime-local"
+                      value={tableFilterEnd}
+                      onChange={(e) => setTableFilterEnd(e.target.value)}
+                    />
+                  </div>
+                  {tableFilterError && <p className="filter-error">{tableFilterError}</p>}
+                  <div className="filter-actions">
+                    <button className="filter-save" onClick={handleApplyTableFilter} title="Save filter">
+                      <FaCheck />
+                    </button>
+                    <button className="filter-cancel" onClick={handleCancelTableFilter} title="Cancel">
+                      <TiCancel />
+                    </button>
+                    <button className="filter-reset" onClick={handleResetTableFilter} title="Reset filter">
+                      <GrPowerReset />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="status-table-wrapper">
-              {combinedDeviceLogs.filter((l) => l.offline === 1).length === 0 ? (
-                <p>No offline logs available.</p>
+              {filteredTableLogs.length === 0 ? (
+                <p>No historical readings available.</p>
               ) : (
                 <table className="status-table">
                   <thead>
                     <tr>
-                      <th>Date</th>
-                      <th>Status</th>
+                      <th>Date & Time</th>
+                      <th>Max Height</th>
+                      <th>Normal Level</th>
+                      <th>Alert Level</th>
+                      <th>Sensor Readings</th>
+                      <th>Water Level Status</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {combinedDeviceLogs
-                      .filter((l) => l.offline === 1)
-                      .sort((a, b) => b.timestamp - a.timestamp) // sort descending
-                      .map((log, i) => (
-                        <tr key={i}>
-                          <td>{log.date}</td>
-                          <td className="offline-status">Offline</td>
-                        </tr>
-                    ))}
+                    {filteredTableLogs
+                      .slice()
+                      .sort((a, b) => b.timestamp - a.timestamp)
+                      .map((log, i) => {
+                        // Determine water level status based on backend logic
+                        let status = "Normal";
+                        let statusClass = "normal-status";
+                        
+                        if (log.distance >= maxMetadata.alertLevel) {
+                          status = "Critical";
+                          statusClass = "critical-status";
+                        } else if (log.distance > maxMetadata.normalLevel && log.distance < maxMetadata.alertLevel) {
+                          status = "Elevated";
+                          statusClass = "elevated-status";
+                        }
+                        
+                        return (
+                          <tr key={i}>
+                            <td>{log.date}</td>
+                            <td>{maxMetadata.maxHeight || 'N/A'}</td>
+                            <td>{maxMetadata.normalLevel || 'N/A'}</td>
+                            <td>{maxMetadata.alertLevel || 'N/A'}</td>
+                            <td>{log.distance}</td>
+                            <td className={statusClass}>{status}</td>
+                          </tr>
+                        );
+                      })}
                   </tbody>
                 </table>
               )}
             </div>
           </div>
 
-          {/* Online Logs Table */}
+          {/* Device Status Logs Table (Combined Online/Offline) */}
           <div className="grid-item">
-            <h3>Online Logs</h3>
+            <h3>Device Status Logs</h3>
             <div className="status-table-wrapper">
-              {combinedDeviceLogs.filter((l) => l.online === 1).length === 0 ? (
-                <p>No online logs available.</p>
+              {combinedDeviceLogs.length === 0 ? (
+                <p>No status logs available.</p>
               ) : (
                 <table className="status-table">
                   <thead>
@@ -483,12 +617,13 @@ const HistoricalDataModal = ({ sensorId, onClose }) => {
                   </thead>
                   <tbody>
                     {combinedDeviceLogs
-                      .filter((l) => l.online === 1)
-                      .sort((a, b) => b.timestamp - a.timestamp) // sort descending
+                      .sort((a, b) => b.timestamp - a.timestamp)
                       .map((log, i) => (
                         <tr key={i}>
                           <td>{log.date}</td>
-                          <td className="online-status">Online</td>
+                          <td className={log.online === 1 ? "online-status" : "offline-status"}>
+                            {log.online === 1 ? "Online" : "Offline"}
+                          </td>
                         </tr>
                     ))}
                   </tbody>
@@ -498,7 +633,6 @@ const HistoricalDataModal = ({ sensorId, onClose }) => {
           </div>
           </div>
         )}
-
 
       </div>
     </div>
