@@ -24,6 +24,22 @@
   position: relative;
   animation: fadeIn 0.3s ease-in-out;
 }
+.history-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+}
+.history-container svg {
+  cursor: pointer;
+  font-size: 2rem;
+  margin-bottom: 1rem;
+  transition: transform 0.3s ease, color 0.3s ease;
+}
+.history-container svg:hover {
+  color: #007bff;
+  transform: scale(1.2);
+}
 .history-title {
   text-align: center;
   font-size: 2rem;

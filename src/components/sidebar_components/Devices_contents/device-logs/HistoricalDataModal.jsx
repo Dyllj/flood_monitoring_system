@@ -6,7 +6,7 @@ import { TbFilterCog } from "react-icons/tb";
 import { FaCheck } from "react-icons/fa6";
 import { TiCancel } from "react-icons/ti";
 import { GrPowerReset } from "react-icons/gr";
-
+import { MdOutlineCreateNewFolder } from "react-icons/md";
 
 import {
   AreaChart,
@@ -21,6 +21,7 @@ import {
 } from "recharts";
 
 import "./historicalDataModal.css";
+import { generateMDRRMOReport } from "./ReportGenerator/ReportGenerator"; // 🔹 IMPORT PDF GENERATOR
 
 // Custom Tooltip Component
 const CustomTooltip = ({ active, payload, label }) => {
@@ -46,6 +47,7 @@ const HistoricalDataModal = ({ sensorId, onClose }) => {
   const [fullAlertLogs, setFullAlertLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [maxMetadata, setMaxMetadata] = useState({});
+  const [generatingReport, setGeneratingReport] = useState(false); // 🔹 NEW STATE
 
   // Filter modal state (for historical readings CHART)
   const [showFilterModal, setShowFilterModal] = useState(false);
@@ -181,6 +183,32 @@ const HistoricalDataModal = ({ sensorId, onClose }) => {
 
     fetchAllLogs();
   }, [sensorId]);
+
+  // 🔹 NEW: Handle PDF generation
+  const handleGenerateReport = async () => {
+    if (fullLogs.length === 0) {
+      alert("No data available to generate report.");
+      return;
+    }
+
+    setGeneratingReport(true);
+    try {
+      await generateMDRRMOReport(
+        sensorId,
+        fullLogs,
+        fullAlertLogs,
+        maxMetadata,
+        filterStart,
+        filterEnd
+      );
+      alert("Report generated successfully!");
+    } catch (error) {
+      console.error("Error generating report:", error);
+      alert("Failed to generate report. Please try again.");
+    } finally {
+      setGeneratingReport(false);
+    }
+  };
 
   if (loading) return <div className="modal">Loading...</div>;
 
@@ -373,6 +401,16 @@ const HistoricalDataModal = ({ sensorId, onClose }) => {
 
         <div className="history-container">
           <h2 id="history-title">{sensorId} Historical Data</h2>
+          {/* 🔹 UPDATED: Generate Report Button */}
+          <MdOutlineCreateNewFolder 
+            className={`generate-report-icon ${generatingReport ? 'generating' : ''}`}
+            onClick={handleGenerateReport}
+            title="Generate MDRRMO Report"
+            style={{ 
+              cursor: generatingReport ? 'wait' : 'pointer',
+              opacity: generatingReport ? 0.5 : 1 
+            }}
+          />
         </div>
 
         {filteredLogs.length === 0 ? (
