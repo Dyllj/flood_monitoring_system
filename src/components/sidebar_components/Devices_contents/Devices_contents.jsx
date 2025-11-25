@@ -377,14 +377,14 @@ const Devices_contents = ({ isAdmin }) => {
                   <AreaChart data={chartData}>
                     <XAxis dataKey="time" hide/>
                     <YAxis domain={[0, maxHeight]} />
-                    <CartesianGrid stroke="rgba(16,16,16,0.5)" />
+                    <CartesianGrid stroke="rgba(0, 0, 0, 1)" />
                     <defs>
                       <linearGradient
                         id={`waterColor-${device.id}`}
                         x1="0"
                         y1="0"
                         x2="0"
-                        y2="1"
+                        y2="1.1"
                       >
                         <stop offset="0%" stopColor={color} stopOpacity={0.6} />
                         <stop offset="100%" stopColor={color} stopOpacity={0.1} />
@@ -395,7 +395,7 @@ const Devices_contents = ({ isAdmin }) => {
                       dataKey="value"
                       stroke={color}
                       fill={`url(#waterColor-${device.id})`}
-                      strokeWidth={2}
+                      strokeWidth={1.5}
                       dot={false}
                       isAnimationActive={true}
                       className="waterlevel-area"
@@ -403,10 +403,12 @@ const Devices_contents = ({ isAdmin }) => {
                   </AreaChart>
                 </ResponsiveContainer>
 
+                {isAdmin && (
                 <LuChevronsLeftRight
                   className="chart-toggle-icon"
                   onClick={() => setHistoricalModalSensor(device.sensorName)}
                 />
+              )}
               </div>
             </div>
           );

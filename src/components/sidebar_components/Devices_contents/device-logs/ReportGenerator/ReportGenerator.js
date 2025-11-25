@@ -43,7 +43,7 @@ export const generateMDRRMOReport = async (sensorId, fullLogs, alertLogs, maxMet
   doc.setFont(undefined, 'normal');
   doc.text('Municipal Disaster Risk Reduction and Management Office', pageWidth / 2, yPos, { align: 'center' });
   yPos += 5;
-  doc.text('Cebu City, Central Visayas', pageWidth / 2, yPos, { align: 'center' });
+  doc.text('Molave, Zamboanga Del Sur', pageWidth / 2, yPos, { align: 'center' });
   yPos += 15;
 
   // Report Details Box
