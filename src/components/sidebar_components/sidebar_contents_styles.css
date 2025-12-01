@@ -61,6 +61,7 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
+  z-index: 1000;
   transition: all 0.3s ease;
   box-shadow: 0 4px 16px 0 rgba(0,0,0,0.3),
               0 6px 20px 0 rgba(0,0,0,0.19);

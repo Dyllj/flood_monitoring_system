@@ -62,6 +62,10 @@ img.logo {
   ul li a {
     font-size: 1rem;
   }
+    img.logo {
+    margin-top: 41vh;
+    width: 50%;
+  }
 }
 
 @media (max-width: 768px) {
@@ -71,7 +75,7 @@ img.logo {
   }
 
   img.logo {
-    margin-top: 10vh;
+    margin-top: 52vh;
     width: 50%;
   }
 
