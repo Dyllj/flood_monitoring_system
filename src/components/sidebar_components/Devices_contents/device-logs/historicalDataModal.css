@@ -9,6 +9,7 @@
   display: flex;
   justify-content: center;
   align-items: center;
+  z-index: 1000;
 }
 
 #historical-data-container {
@@ -142,13 +143,14 @@
   position: relative;
 }
 
+
 .clickable-chart::after,
 .clickable-table::after {
   content: '🔍 Click to enlarge';
-  position: absolute;
-  bottom: 10px;
-  right: 10px;
-  background: rgba(0, 0, 0, 0.7);
+  position: fixed;
+  bottom: 1.7rem;
+  right: 1.7rem;
+  background: rgba(0, 0, 0, 0.5);
   color: white;
   padding: 4px 8px;
   border-radius: 4px;
@@ -165,12 +167,12 @@
 
 .clickable-chart:hover,
 .clickable-table:hover {
-  box-shadow: 0 0 15px rgba(0, 123, 255, 0.5);
+  box-shadow: 0 0 15px rgba(8, 8, 8, 0.5);
 }
 
 .clickable-chart:active,
 .clickable-table:active {
-  transform: scale(0.99);
+  animation: fadeOut 1s ease;
 }
 
 /* ===============================
@@ -239,8 +241,8 @@
 }
 
 .generate-table-report-icon {
-  color: #28a745;
-  font-size: 1.6rem;
+  color: #128a745;
+  font-size: 1.8rem;
 }
 
 .generate-table-report-icon:hover {
@@ -354,14 +356,19 @@
    FILTER MODAL
 ================================== */
 .filter-historical-data-overlay {
-  position: fixed;
-  border-radius: 12px;
+  position: fixed !important; /* ensure fixed relative to viewport */
   inset: 0;
   display: flex;
   justify-content: center;
   align-items: center;
   background: rgba(0, 0, 0, 0.5);
-  z-index: 1000;
+  z-index: 99999 !important; /* very high to override any other stacking context */
+}
+
+/* Higher z-index when filter is inside enlarged view */
+.chart-enlarge-container .filter-historical-data-overlay {
+  position: fixed !important;
+  z-index: 99998 !important;
 }
 
 .filter-historical-data-modal {
@@ -373,7 +380,8 @@
   height: 95%;
   width: 90%;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
-  position: relative;
+  position: relative !important;
+  z-index: 100000 !important; /* ensure modal content is above overlay and everything else */
   animation: slideDown 0.3s ease;
 }
 

@@ -24,7 +24,8 @@ import "./historicalDataModal.css";
 import { generateMDRRMOReport } from "./ReportGenerator/ReportGenerator";
 import { generateTableReport } from "./ReportGenerator/TableReportGenerator";
 import { useEnlargeChart } from "./useEnlargeChart";
-import { EnlargedChartModal } from "./EnlargeChartModal";
+import EnlargedChartModal from "./EnlargeChartModal";
+import { createPortal } from "react-dom";
 
 // Custom Tooltip Component
 const CustomTooltip = ({ active, payload, label }) => {
@@ -407,39 +408,17 @@ const HistoricalDataModal = ({ sensorId, onClose }) => {
                 </h3>
 
                 {showFilterModal && (
-                  <div className="filter-historical-data-overlay" onClick={() => setShowFilterModal(false)}>
-                    <div className="filter-historical-data-modal" onClick={(e) => e.stopPropagation()}>
-                      <h4>Filter Historical Data Chart</h4>
-                      <div className="filter-row">
-                        <label>Start</label>
-                        <input
-                          type="datetime-local"
-                          value={filterStart}
-                          onChange={(e) => setFilterStart(e.target.value)}
-                        />
-                      </div>
-                      <div className="filter-row">
-                        <label>End</label>
-                        <input
-                          type="datetime-local"
-                          value={filterEnd}
-                          onChange={(e) => setFilterEnd(e.target.value)}
-                        />
-                      </div>
-                      {filterError && <p className="filter-error">{filterError}</p>}
-                      <div className="filter-actions">
-                        <button className="filter-save" onClick={handleApplyFilter} title="Save filter">
-                          <FaCheck />
-                        </button>
-                        <button className="filter-cancel" onClick={() => setShowFilterModal(false)} title="Cancel">
-                          <TiCancel />
-                        </button>
-                        <button className="filter-reset" onClick={handleResetFilter} title="Reset filter">
-                          <GrPowerReset />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
+                  <FilterModal
+                    title="Filter Historical Data Chart"
+                    startValue={filterStart}
+                    endValue={filterEnd}
+                    onStartChange={setFilterStart}
+                    onEndChange={setFilterEnd}
+                    error={filterError}
+                    onSave={handleApplyFilter}
+                    onCancel={() => setShowFilterModal(false)}
+                    onReset={handleResetFilter}
+                  />
                 )}
 
                 <div 
@@ -475,41 +454,19 @@ const HistoricalDataModal = ({ sensorId, onClose }) => {
                 </h3>
 
                 {showAlertFilterModal && (
-                  <div className="filter-historical-data-overlay" onClick={() => setShowAlertFilterModal(false)}>
-                    <div className="filter-historical-data-modal" onClick={(e) => e.stopPropagation()}>
-                      <h4>Filter SMS Alerts</h4>
-                      <div className="filter-row">
-                        <label>Start</label>
-                        <input
-                          type="datetime-local"
-                          value={alertFilterStart}
-                          onChange={(e) => setAlertFilterStart(e.target.value)}
-                        />
-                      </div>
-                      <div className="filter-row">
-                        <label>End</label>
-                        <input
-                          type="datetime-local"
-                          value={alertFilterEnd}
-                          onChange={(e) => setAlertFilterEnd(e.target.value)}
-                        />
-                      </div>
-                      {alertFilterError && <p className="filter-error">{alertFilterError}</p>}
-                      <div className="filter-actions">
-                        <button className="filter-save" onClick={handleApplyAlertFilter} title="Save filter">
-                          <FaCheck />
-                        </button>
-                        <button className="filter-cancel" onClick={() => setShowAlertFilterModal(false)} title="Cancel">
-                          <TiCancel />
-                        </button>
-                        <button className="filter-reset" onClick={handleResetAlertFilter} title="Reset filter">
-                          <GrPowerReset />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
+                  <FilterModal
+                    title="Filter SMS Alerts"
+                    startValue={alertFilterStart}
+                    endValue={alertFilterEnd}
+                    onStartChange={setAlertFilterStart}
+                    onEndChange={setAlertFilterEnd}
+                    error={alertFilterError}
+                    onSave={handleApplyAlertFilter}
+                    onCancel={() => setShowAlertFilterModal(false)}
+                    onReset={handleResetAlertFilter}
+                  />
                 )}
-
+ 
                 <div className="area-chart-wrapper">
                   <ResponsiveContainer width="100%" height={250}>
                     <AreaChart data={alertLogs}>
@@ -529,50 +486,28 @@ const HistoricalDataModal = ({ sensorId, onClose }) => {
                   </ResponsiveContainer>
                 </div>
               </div>
-
+ 
               {/* Historical Data Table - CLICKABLE */}
               <div className="grid-item">
                 <h3>
                   <TbFilterCog className="filterIcon" onClick={openTableFilterModal}/>
                   Historical Data Table
                 </h3>
-
+ 
                 {showTableFilterModal && (
-                  <div className="filter-historical-data-overlay" onClick={() => setShowTableFilterModal(false)}>
-                    <div className="filter-historical-data-modal" onClick={(e) => e.stopPropagation()}>
-                      <h4>Filter Historical Data Table</h4>
-                      <div className="filter-row">
-                        <label>Start</label>
-                        <input
-                          type="datetime-local"
-                          value={tableFilterStart}
-                          onChange={(e) => setTableFilterStart(e.target.value)}
-                        />
-                      </div>
-                      <div className="filter-row">
-                        <label>End</label>
-                        <input
-                          type="datetime-local"
-                          value={tableFilterEnd}
-                          onChange={(e) => setTableFilterEnd(e.target.value)}
-                        />
-                      </div>
-                      {tableFilterError && <p className="filter-error">{tableFilterError}</p>}
-                      <div className="filter-actions">
-                        <button className="filter-save" onClick={handleApplyTableFilter} title="Save filter">
-                          <FaCheck />
-                        </button>
-                        <button className="filter-cancel" onClick={() => setShowTableFilterModal(false)} title="Cancel">
-                          <TiCancel />
-                        </button>
-                        <button className="filter-reset" onClick={handleResetTableFilter} title="Reset filter">
-                          <GrPowerReset />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
+                  <FilterModal
+                    title="Filter Historical Data Table"
+                    startValue={tableFilterStart}
+                    endValue={tableFilterEnd}
+                    onStartChange={setTableFilterStart}
+                    onEndChange={setTableFilterEnd}
+                    error={tableFilterError}
+                    onSave={handleApplyTableFilter}
+                    onCancel={() => setShowTableFilterModal(false)}
+                    onReset={handleResetTableFilter}
+                  />
                 )}
-
+ 
                 <div 
                   className="status-table-wrapper clickable-table"
                   onClick={() => openEnlargedView('historicalTable')}
@@ -681,5 +616,41 @@ const HistoricalDataModal = ({ sensorId, onClose }) => {
     </>
   );
 };
+
+function FilterModal({
+  title,
+  startValue,
+  endValue,
+  onStartChange,
+  onEndChange,
+  error,
+  onSave,
+  onCancel,
+  onReset,
+}) {
+  if (!document || !document.body) return null;
+  return createPortal(
+    <div className="filter-historical-data-overlay" onClick={onCancel}>
+      <div className="filter-historical-data-modal" onClick={(e) => e.stopPropagation()}>
+        <h4>{title}</h4>
+        <div className="filter-row">
+          <label>Start</label>
+          <input type="datetime-local" value={startValue} onChange={(e) => onStartChange(e.target.value)} />
+        </div>
+        <div className="filter-row">
+          <label>End</label>
+          <input type="datetime-local" value={endValue} onChange={(e) => onEndChange(e.target.value)} />
+        </div>
+        {error && <p className="filter-error">{error}</p>}
+        <div className="filter-actions">
+          <button className="filter-save" onClick={onSave} title="Save filter"><FaCheck /></button>
+          <button className="filter-cancel" onClick={onCancel} title="Cancel"><TiCancel /></button>
+          <button className="filter-reset" onClick={onReset} title="Reset filter"><GrPowerReset /></button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
 
 export default HistoricalDataModal;
