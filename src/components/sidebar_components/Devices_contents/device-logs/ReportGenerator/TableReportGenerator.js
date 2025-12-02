@@ -2,9 +2,27 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
+// Helper function to format date to "Month Day, Year"
+const formatDate = (dateString) => {
+  const date = new Date(dateString);
+  const options = { year: 'numeric', month: 'long', day: 'numeric' };
+  return date.toLocaleDateString('en-US', options);
+};
+
+// Helper function to format timestamp to full date with time
+const formatDateTime = (timestamp) => {
+  const date = new Date(timestamp);
+  const dateOptions = { year: 'numeric', month: 'long', day: 'numeric' };
+  const timeOptions = { hour: '2-digit', minute: '2-digit', hour12: true };
+  const dateStr = date.toLocaleDateString('en-US', dateOptions);
+  const timeStr = date.toLocaleTimeString('en-US', timeOptions);
+  return `${dateStr} ${timeStr}`;
+};
+
 export const generateTableReport = async (sensorId, filteredTableLogs, maxMetadata) => {
-  const doc = new jsPDF('landscape'); // Use landscape for table
+  const doc = new jsPDF('portrait'); // Changed to portrait
   const pageWidth = doc.internal.pageSize.width;
+  const margin = 15;
   let yPos = 20;
 
   // Header
@@ -15,15 +33,17 @@ export const generateTableReport = async (sensorId, filteredTableLogs, maxMetada
 
   doc.setFontSize(12);
   doc.setFont(undefined, 'normal');
-  doc.text(`Sensor Location: ${sensorId}`, pageWidth / 2, yPos, { align: 'center' });
-  yPos += 7;
-  doc.text(`Report Generated: ${new Date().toLocaleString()}`, pageWidth / 2, yPos, { align: 'center' });
+  doc.text(`Sensor Name: ${sensorId}`, pageWidth / 2, yPos, { align: 'center' });
+  yPos += 6;
+  doc.text(`Sensor Location: Molave, Zamboanga Del Sur`, pageWidth / 2, yPos, { align: 'center' });
+  yPos += 6;
+  doc.text(`Report Generated: ${formatDate(new Date())}`, pageWidth / 2, yPos, { align: 'center' });
   yPos += 15;
 
   // Summary Statistics
   doc.setFontSize(11);
   doc.setFont(undefined, 'bold');
-  doc.text('Summary Statistics:', 15, yPos);
+  doc.text('Summary Statistics:', pageWidth / 2, yPos, { align: 'center' });
   yPos += 7;
 
   const normalCount = filteredTableLogs.filter(log => log.distance <= maxMetadata.normalLevel).length;
@@ -34,16 +54,16 @@ export const generateTableReport = async (sensorId, filteredTableLogs, maxMetada
 
   doc.setFont(undefined, 'normal');
   doc.setFontSize(10);
-  doc.text(`Total Readings: ${filteredTableLogs.length}`, 15, yPos);
+  doc.text(`Total Readings: ${filteredTableLogs.length}`, pageWidth / 2, yPos, { align: 'center' });
   yPos += 5;
-  doc.text(`Normal Readings: ${normalCount} (${((normalCount / filteredTableLogs.length) * 100).toFixed(1)}%)`, 15, yPos);
+  doc.text(`Normal Readings: ${normalCount} (${((normalCount / filteredTableLogs.length) * 100).toFixed(1)}%)`, pageWidth / 2, yPos, { align: 'center' });
   yPos += 5;
-  doc.text(`Elevated Readings: ${elevatedCount} (${((elevatedCount / filteredTableLogs.length) * 100).toFixed(1)}%)`, 15, yPos);
+  doc.text(`Elevated Readings: ${elevatedCount} (${((elevatedCount / filteredTableLogs.length) * 100).toFixed(1)}%)`, pageWidth / 2, yPos, { align: 'center' });
   yPos += 5;
-  doc.text(`Critical Readings: ${criticalCount} (${((criticalCount / filteredTableLogs.length) * 100).toFixed(1)}%)`, 15, yPos);
+  doc.text(`Critical Readings: ${criticalCount} (${((criticalCount / filteredTableLogs.length) * 100).toFixed(1)}%)`, pageWidth / 2, yPos, { align: 'center' });
   yPos += 15;
 
-  // Table Data
+  // Table Data with formatted dates
   const tableData = filteredTableLogs
     .slice()
     .sort((a, b) => b.timestamp - a.timestamp)
@@ -55,8 +75,11 @@ export const generateTableReport = async (sensorId, filteredTableLogs, maxMetada
         status = "Elevated";
       }
 
+      // Format the date using the timestamp
+      const formattedDateTime = formatDateTime(log.timestamp);
+
       return [
-        log.date,
+        formattedDateTime,
         maxMetadata.maxHeight || 'N/A',
         maxMetadata.normalLevel || 'N/A',
         maxMetadata.alertLevel || 'N/A',
@@ -70,16 +93,25 @@ export const generateTableReport = async (sensorId, filteredTableLogs, maxMetada
     head: [['Date & Time', 'Max Height', 'Normal Level', 'Alert Level', 'Sensor Reading', 'Status']],
     body: tableData,
     theme: 'striped',
-    headStyles: { fillColor: [41, 128, 185], fontSize: 9 },
-    bodyStyles: { fontSize: 8 },
-    columnStyles: {
-      0: { cellWidth: 45 },
-      1: { cellWidth: 25 },
-      2: { cellWidth: 25 },
-      3: { cellWidth: 25 },
-      4: { cellWidth: 30 },
-      5: { cellWidth: 25 }
+    headStyles: { 
+      fillColor: [41, 128, 185], 
+      fontSize: 9,
+      halign: 'center',
+      fontStyle: 'bold'
     },
+    bodyStyles: { 
+      fontSize: 8,
+      halign: 'center'
+    },
+    columnStyles: {
+      0: { cellWidth: 55 }, // Wider for formatted date
+      1: { cellWidth: 22 },
+      2: { cellWidth: 22 },
+      3: { cellWidth: 22 },
+      4: { cellWidth: 28 },
+      5: { cellWidth: 22 }
+    },
+    margin: { left: margin, right: margin },
     didParseCell: (data) => {
       // Color code status column
       if (data.column.index === 5 && data.section === 'body') {
@@ -101,7 +133,7 @@ export const generateTableReport = async (sensorId, filteredTableLogs, maxMetada
   // Footer
   const finalY = doc.lastAutoTable.finalY + 15;
   doc.setFontSize(8);
-  doc.text(`Generated by MDRRMO Monitoring System | ${new Date().toLocaleString()}`, 15, finalY);
+  doc.text(`Generated by MDRRMO Monitoring System | ${formatDate(new Date())}`, pageWidth / 2, finalY, { align: 'center' });
 
   // Save
   const fileName = `Table_Report_${sensorId}_${new Date().toISOString().split('T')[0]}.pdf`;

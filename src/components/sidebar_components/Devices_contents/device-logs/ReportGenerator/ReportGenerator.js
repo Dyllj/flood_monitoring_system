@@ -6,7 +6,8 @@ export const generateMDRRMOReport = async (sensorId, fullLogs, alertLogs, maxMet
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.width;
   const pageHeight = doc.internal.pageSize.height;
-  const margin = 15;
+  const margin = 20;
+  const contentWidth = pageWidth - (2 * margin);
   let yPos = 20;
 
   // Helper function to add new page if needed
@@ -24,7 +25,7 @@ export const generateMDRRMOReport = async (sensorId, fullLogs, alertLogs, maxMet
     checkPageBreak(15);
     doc.setFontSize(size);
     doc.setFont(undefined, 'bold');
-    doc.text(title, margin, yPos);
+    doc.text(title, pageWidth / 2, yPos, { align: 'center' });
     yPos += 8;
     doc.setFont(undefined, 'normal');
   };
@@ -49,24 +50,27 @@ export const generateMDRRMOReport = async (sensorId, fullLogs, alertLogs, maxMet
   // Report Details Box
   doc.setDrawColor(0, 0, 0);
   doc.setLineWidth(0.5);
-  doc.rect(margin, yPos - 5, pageWidth - 2 * margin, 30);
+  const boxHeight = 30;
+  const boxX = margin;
+  const boxY = yPos - 5;
+  doc.rect(boxX, boxY, contentWidth, boxHeight);
   
   doc.setFontSize(10);
   doc.setFont(undefined, 'bold');
-  doc.text('REPORT DETAILS', margin + 3, yPos);
+  doc.text('REPORT DETAILS', pageWidth / 2, yPos, { align: 'center' });
   yPos += 7;
 
   doc.setFont(undefined, 'normal');
   const startDate = new Date(filterStart || fullLogs[0]?.timestamp);
   const endDate = new Date(filterEnd || fullLogs[fullLogs.length - 1]?.timestamp);
   
-  doc.text(`Reporting Period: ${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()}`, margin + 3, yPos);
+  doc.text(`Reporting Period: ${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()}`, pageWidth / 2, yPos, { align: 'center' });
   yPos += 5;
-  doc.text(`Sensor Location: ${sensorId}`, margin + 3, yPos);
+  doc.text(`Sensor Location: ${sensorId}`, pageWidth / 2, yPos, { align: 'center' });
   yPos += 5;
-  doc.text(`Report Generated: ${new Date().toLocaleString()}`, margin + 3, yPos);
+  doc.text(`Report Generated: ${new Date().toLocaleString()}`, pageWidth / 2, yPos, { align: 'center' });
   yPos += 5;
-  doc.text(`Prepared By: MDRRMO Monitoring Team`, margin + 3, yPos);
+  doc.text(`Prepared By: MDRRMO Monitoring Team`, pageWidth / 2, yPos, { align: 'center' });
   yPos += 15;
 
   // ===========================
@@ -91,15 +95,15 @@ export const generateMDRRMOReport = async (sensorId, fullLogs, alertLogs, maxMet
 
   doc.setFontSize(12);
   doc.setFont(undefined, 'bold');
-  doc.text('Current Risk Level: ', margin, yPos);
+  doc.text('Current Risk Level: ', pageWidth / 2 - 20, yPos, { align: 'center' });
   doc.setTextColor(...riskColor);
-  doc.text(riskLevel, margin + 45, yPos);
+  doc.text(riskLevel, pageWidth / 2 + 20, yPos, { align: 'center' });
   doc.setTextColor(0, 0, 0);
   yPos += 10;
 
   doc.setFontSize(10);
   doc.setFont(undefined, 'bold');
-  doc.text('Key Findings:', margin, yPos);
+  doc.text('Key Findings:', pageWidth / 2, yPos, { align: 'center' });
   yPos += 6;
 
   doc.setFont(undefined, 'normal');
@@ -111,7 +115,7 @@ export const generateMDRRMOReport = async (sensorId, fullLogs, alertLogs, maxMet
 
   findings.forEach(finding => {
     checkPageBreak();
-    doc.text(finding, margin + 2, yPos);
+    doc.text(finding, pageWidth / 2, yPos, { align: 'center' });
     yPos += 5;
   });
   yPos += 10;
@@ -130,11 +134,11 @@ export const generateMDRRMOReport = async (sensorId, fullLogs, alertLogs, maxMet
   const criticalPct = ((criticalFullCount / fullLogs.length) * 100).toFixed(1);
 
   doc.setFontSize(10);
-  doc.text(`Average Water Level: ${avgLevel}m`, margin, yPos);
+  doc.text(`Average Water Level: ${avgLevel}m`, pageWidth / 2, yPos, { align: 'center' });
   yPos += 5;
-  doc.text(`Highest Recorded Level: ${maxLevel}m`, margin, yPos);
+  doc.text(`Highest Recorded Level: ${maxLevel}m`, pageWidth / 2, yPos, { align: 'center' });
   yPos += 5;
-  doc.text(`Total Data Points: ${fullLogs.length}`, margin, yPos);
+  doc.text(`Total Data Points: ${fullLogs.length}`, pageWidth / 2, yPos, { align: 'center' });
   yPos += 10;
 
   // Status distribution table
@@ -147,7 +151,8 @@ export const generateMDRRMOReport = async (sensorId, fullLogs, alertLogs, maxMet
       ['Critical', criticalFullCount, `${criticalPct}%`, `Above ${maxMetadata.alertLevel}m - High flood risk`],
     ],
     theme: 'striped',
-    headStyles: { fillColor: [41, 128, 185] },
+    headStyles: { fillColor: [41, 128, 185], halign: 'center' },
+    bodyStyles: { halign: 'center' },
     margin: { left: margin, right: margin },
   });
 
@@ -185,7 +190,7 @@ export const generateMDRRMOReport = async (sensorId, fullLogs, alertLogs, maxMet
   });
 
   doc.setFontSize(10);
-  doc.text(`Total Critical Events: ${criticalEvents.length}`, margin, yPos);
+  doc.text(`Total Critical Events: ${criticalEvents.length}`, pageWidth / 2, yPos, { align: 'center' });
   yPos += 10;
 
   if (criticalEvents.length > 0) {
@@ -201,18 +206,19 @@ export const generateMDRRMOReport = async (sensorId, fullLogs, alertLogs, maxMet
       head: [['#', 'Date & Time', 'Peak Level', 'Duration']],
       body: tableData,
       theme: 'striped',
-      headStyles: { fillColor: [231, 76, 60] },
+      headStyles: { fillColor: [231, 76, 60], halign: 'center' },
+      bodyStyles: { halign: 'center' },
       margin: { left: margin, right: margin },
     });
 
     yPos = doc.lastAutoTable.finalY + 5;
     
     if (criticalEvents.length > 10) {
-      doc.text(`... and ${criticalEvents.length - 10} more events`, margin, yPos);
+      doc.text(`... and ${criticalEvents.length - 10} more events`, pageWidth / 2, yPos, { align: 'center' });
       yPos += 5;
     }
   } else {
-    doc.text('No critical events recorded during this period.', margin, yPos);
+    doc.text('No critical events recorded during this period.', pageWidth / 2, yPos, { align: 'center' });
     yPos += 5;
   }
 
@@ -226,7 +232,7 @@ export const generateMDRRMOReport = async (sensorId, fullLogs, alertLogs, maxMet
 
   doc.setFontSize(10);
   doc.setFont(undefined, 'bold');
-  doc.text('A. Time-Based Patterns (Critical Events Frequency):', margin, yPos);
+  doc.text('A. Time-Based Patterns (Critical Events Frequency):', pageWidth / 2, yPos, { align: 'center' });
   yPos += 7;
 
   const hourlyDistribution = {};
@@ -245,11 +251,11 @@ export const generateMDRRMOReport = async (sensorId, fullLogs, alertLogs, maxMet
     sortedHours.forEach(([hour, count]) => {
       checkPageBreak();
       const pct = ((count / criticalEvents.length) * 100).toFixed(1);
-      doc.text(`• ${hour}:00 - ${parseInt(hour)+1}:00: ${count} events (${pct}%)`, margin + 2, yPos);
+      doc.text(`• ${hour}:00 - ${parseInt(hour)+1}:00: ${count} events (${pct}%)`, pageWidth / 2, yPos, { align: 'center' });
       yPos += 5;
     });
   } else {
-    doc.text('No significant time patterns detected.', margin + 2, yPos);
+    doc.text('No significant time patterns detected.', pageWidth / 2, yPos, { align: 'center' });
     yPos += 5;
   }
 
@@ -267,15 +273,15 @@ export const generateMDRRMOReport = async (sensorId, fullLogs, alertLogs, maxMet
   const alertAccuracy = criticalEvents.length > 0 ? ((totalAlerts / criticalEvents.length) * 100).toFixed(1) : 'N/A';
 
   doc.setFontSize(10);
-  doc.text(`Total Automatic Alerts: ${autoAlerts}`, margin, yPos);
+  doc.text(`Total Automatic Alerts: ${autoAlerts}`, pageWidth / 2, yPos, { align: 'center' });
   yPos += 5;
-  doc.text(`Total Manual Alerts: ${manualAlerts}`, margin, yPos);
+  doc.text(`Total Manual Alerts: ${manualAlerts}`, pageWidth / 2, yPos, { align: 'center' });
   yPos += 5;
-  doc.text(`Total Alerts Sent: ${totalAlerts}`, margin, yPos);
+  doc.text(`Total Alerts Sent: ${totalAlerts}`, pageWidth / 2, yPos, { align: 'center' });
   yPos += 5;
-  doc.text(`Alert Response Rate: ${alertAccuracy}%`, margin, yPos);
+  doc.text(`Alert Response Rate: ${alertAccuracy}%`, pageWidth / 2, yPos, { align: 'center' });
   yPos += 5;
-  doc.text(`Critical Events Detected: ${criticalEvents.length}`, margin, yPos);
+  doc.text(`Critical Events Detected: ${criticalEvents.length}`, pageWidth / 2, yPos, { align: 'center' });
   yPos += 15;
 
   // ===========================
@@ -287,10 +293,10 @@ export const generateMDRRMOReport = async (sensorId, fullLogs, alertLogs, maxMet
   // Day over Day (last 7 days)
   doc.setFontSize(10);
   doc.setFont(undefined, 'bold');
-  doc.text('Day-over-Day Comparison (Last 7 Days):', margin, yPos);
+  doc.text('Day-over-Day Comparison (Last 7 Days):', pageWidth / 2, yPos, { align: 'center' });
   yPos += 7;
 
-  const last7Days = fullLogs.slice(-7 * 24 * 12); // Assuming 5-min intervals
+  const last7Days = fullLogs.slice(-7 * 24 * 12);
   const dailyAvg = {};
   
   last7Days.forEach(log => {
@@ -312,24 +318,21 @@ export const generateMDRRMOReport = async (sensorId, fullLogs, alertLogs, maxMet
       head: [['Date', 'Avg Water Level']],
       body: dailyData.slice(-7),
       theme: 'grid',
-      headStyles: { fillColor: [52, 152, 219] },
+      headStyles: { fillColor: [52, 152, 219], halign: 'center' },
+      bodyStyles: { halign: 'center' },
       margin: { left: margin, right: margin },
-      columnStyles: {
-        0: { cellWidth: 80 },
-        1: { cellWidth: 40 },
-      },
     });
     yPos = doc.lastAutoTable.finalY + 10;
   } else {
     doc.setFont(undefined, 'normal');
-    doc.text('Insufficient data for daily comparison.', margin + 2, yPos);
+    doc.text('Insufficient data for daily comparison.', pageWidth / 2, yPos, { align: 'center' });
     yPos += 10;
   }
 
   // Week over Week
   checkPageBreak(30);
   doc.setFont(undefined, 'bold');
-  doc.text('Week-over-Week Comparison:', margin, yPos);
+  doc.text('Week-over-Week Comparison:', pageWidth / 2, yPos, { align: 'center' });
   yPos += 7;
 
   doc.setFont(undefined, 'normal');
@@ -340,27 +343,27 @@ export const generateMDRRMOReport = async (sensorId, fullLogs, alertLogs, maxMet
     const previous = weeklyData[weeklyData.length - 2];
     const change = ((current.avg - previous.avg) / previous.avg * 100).toFixed(1);
     
-    doc.text(`Current Week Avg: ${current.avg.toFixed(2)}m`, margin + 2, yPos);
+    doc.text(`Current Week Avg: ${current.avg.toFixed(2)}m`, pageWidth / 2, yPos, { align: 'center' });
     yPos += 5;
-    doc.text(`Previous Week Avg: ${previous.avg.toFixed(2)}m`, margin + 2, yPos);
+    doc.text(`Previous Week Avg: ${previous.avg.toFixed(2)}m`, pageWidth / 2, yPos, { align: 'center' });
     yPos += 5;
-    doc.text(`Change: ${change > 0 ? '+' : ''}${change}%`, margin + 2, yPos);
+    doc.text(`Change: ${change > 0 ? '+' : ''}${change}%`, pageWidth / 2, yPos, { align: 'center' });
     yPos += 10;
   } else {
-    doc.text('Insufficient data for weekly comparison.', margin + 2, yPos);
+    doc.text('Insufficient data for weekly comparison.', pageWidth / 2, yPos, { align: 'center' });
     yPos += 10;
   }
 
   // Month over Month
   checkPageBreak(30);
   doc.setFont(undefined, 'bold');
-  doc.text('Month-over-Month Comparison:', margin, yPos);
+  doc.text('Month-over-Month Comparison:', pageWidth / 2, yPos, { align: 'center' });
   yPos += 7;
 
   doc.setFont(undefined, 'normal');
-  doc.text('Note: This requires historical data spanning multiple months.', margin + 2, yPos);
+  doc.text('Note: This requires historical data spanning multiple months.', pageWidth / 2, yPos, { align: 'center' });
   yPos += 5;
-  doc.text('Current implementation shows data within selected date range.', margin + 2, yPos);
+  doc.text('Current implementation shows data within selected date range.', pageWidth / 2, yPos, { align: 'center' });
   yPos += 15;
 
   // ===========================
@@ -373,23 +376,26 @@ export const generateMDRRMOReport = async (sensorId, fullLogs, alertLogs, maxMet
 
   doc.setFontSize(10);
   doc.setFont(undefined, 'bold');
-  doc.text('CERTIFICATION', margin, yPos);
+  doc.text('CERTIFICATION', pageWidth / 2, yPos, { align: 'center' });
   yPos += 7;
 
   doc.setFont(undefined, 'normal');
   doc.setFontSize(9);
   const certText = 'This report has been prepared in accordance with RA 10121 and NDRRMC guidelines. All data presented are based on actual sensor readings and verified incident reports.';
-  const splitCert = doc.splitTextToSize(certText, pageWidth - 2 * margin);
-  doc.text(splitCert, margin, yPos);
-  yPos += splitCert.length * 5 + 10;
-
-  doc.text('Prepared by: MDRRMO Monitoring Team', margin, yPos);
+  const splitCert = doc.splitTextToSize(certText, contentWidth);
+  splitCert.forEach(line => {
+    doc.text(line, pageWidth / 2, yPos, { align: 'center' });
+    yPos += 5;
+  });
   yPos += 5;
-  doc.text('Approved by: MDRRMO Head Officer, Molave, Zamboanga Del Sur', margin, yPos);
+
+  doc.text('Prepared by: MDRRMO Monitoring Team', pageWidth / 2, yPos, { align: 'center' });
+  yPos += 5;
+  doc.text('Approved by: MDRRMO Head Officer, Molave, Zamboanga Del Sur', pageWidth / 2, yPos, { align: 'center' });
   yPos += 10;
 
   doc.setFontSize(8);
-  doc.text(`Report generated on ${new Date().toLocaleString()}`, margin, yPos);
+  doc.text(`Report generated on ${new Date().toLocaleString()}`, pageWidth / 2, yPos, { align: 'center' });
 
   // Save PDF
   const fileName = `MDRRMO_Report_${sensorId}_${new Date().toISOString().split('T')[0]}.pdf`;
@@ -403,7 +409,7 @@ function calculateWeeklyAverages(logs) {
   logs.forEach(log => {
     const date = new Date(log.timestamp);
     const weekStart = new Date(date);
-    weekStart.setDate(date.getDate() - date.getDay()); // Start of week (Sunday)
+    weekStart.setDate(date.getDate() - date.getDay());
     const weekKey = weekStart.toISOString().split('T')[0];
     
     if (!weeklyMap[weekKey]) weeklyMap[weekKey] = { sum: 0, count: 0 };
