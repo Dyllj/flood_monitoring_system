@@ -15,6 +15,9 @@ import { handleSave } from "./Logs_contents_functions/handleSave";
 import { handleCancel } from "./Logs_contents_functions/handleCancel";
 import { handleDeleteLog, handleDeleteAllLogs } from "./Logs_contents_functions/handleDeleteLog";
 
+// Import SMS Logs Report Success Notification
+import SmsLogsReportSuccess from "../../custom-notification/for-generate-report/for-generate-smsLogs-report";
+
 const Logs_contents = () => {
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [startDate, setStartDate] = useState("");
@@ -24,6 +27,9 @@ const Logs_contents = () => {
   const [logs, setLogs] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+
+  // NEW: SMS Report generation notification
+  const [showSmsReportSuccess, setShowSmsReportSuccess] = useState(false);
 
   useEffect(() => {
     fetchSensors(setSensorsList);
@@ -35,8 +41,18 @@ const Logs_contents = () => {
 
   const filteredLogs = filterLogs(logs, startDate, endDate, sensor, searchTerm);
 
+  // Enhanced report generation handler with notification
+  const handleGenerateReportWithNotification = () => {
+    handleGenerateReport(filteredLogs, startDate, endDate);
+    setShowSmsReportSuccess(true);
+    setTimeout(() => setShowSmsReportSuccess(false), 4000);
+  };
+
   return (
     <>
+      {/* SMS Report Success Notification */}
+      {showSmsReportSuccess && <SmsLogsReportSuccess onClose={() => setShowSmsReportSuccess(false)} />}
+
       <div className="logs-contents"></div>
 
       <div className="logs_contents2">
@@ -57,7 +73,7 @@ const Logs_contents = () => {
             onFocus={() => setIsSearchFocused(true)}
             onBlur={() => setIsSearchFocused(false)}
           />
-          {/* 🚨 Delete All Logs Icon */}
+          {/* Delete All Logs Icon */}
 
         </div>
             <MdDeleteOutline
@@ -116,7 +132,7 @@ const Logs_contents = () => {
         </button>
         <button
           className="report-btn"
-          onClick={() => handleGenerateReport(filteredLogs, startDate, endDate)}
+          onClick={handleGenerateReportWithNotification}
         >
           <MdCreateNewFolder />
         </button>
