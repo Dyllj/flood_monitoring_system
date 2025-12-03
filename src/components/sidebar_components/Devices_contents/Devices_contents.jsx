@@ -35,8 +35,14 @@ import AutoSmsAlertSuccess from "../../custom-notification/for-sms-alert/auto-sm
 import { handleSendSms } from "../Devices_contents/Devices_contents_functions/handleSendSms.js";
 
 import HistoricalDataModal from "./device-logs/HistoricalDataModal.jsx";
-import EditAlertTemplateModal from "../Devices_contents/messageTempModal/EditAlertTemplateModal.jsx"; // 🔹 NEW IMPORT
+import EditAlertTemplateModal from "../Devices_contents/messageTempModal/EditAlertTemplateModal.jsx";
 
+// Import new notifications
+import EditDeviceSuccess from "../../custom-notification/for-edit-device/edit-device-success.jsx";
+import EditDeviceFailed from "../../custom-notification/for-edit-device/edit-device-failed.jsx";
+import DeleteDeviceSuccess from "../../custom-notification/for-delete-device/delete-device-success.jsx";
+import DeleteDeviceFailed from "../../custom-notification/for-delete-device/delete-device-failed.jsx";
+import MessageEditedSuccess from "../../custom-notification/for-edit-sms-format/message-edited.jsx";
 
 const Devices_contents = ({ isAdmin }) => {
   const [showAddDevice, setShowAddDevice] = useState(false);
@@ -52,6 +58,8 @@ const Devices_contents = ({ isAdmin }) => {
     normalLevel: "",
     alertLevel: "",
   });
+  
+  // SMS Alert notifications
   const [showSmsAlert, setShowSmsAlert] = useState(false);
   const [showSmsAlertFailed, setShowSmsAlertFailed] = useState(false);
 
@@ -62,9 +70,15 @@ const Devices_contents = ({ isAdmin }) => {
   // Historical modal state
   const [historicalModalSensor, setHistoricalModalSensor] = useState(null);
 
-  // 🔹 NEW: Edit alert template modal state
+  // Edit alert template modal state
   const [showEditAlertTemplate, setShowEditAlertTemplate] = useState(false);
 
+  // NEW: Device Edit/Delete notifications
+  const [showEditDeviceSuccess, setShowEditDeviceSuccess] = useState(false);
+  const [showEditDeviceFailed, setShowEditDeviceFailed] = useState(false);
+  const [showDeleteDeviceSuccess, setShowDeleteDeviceSuccess] = useState(false);
+  const [showDeleteDeviceFailed, setShowDeleteDeviceFailed] = useState(false);
+  const [showMessageEdited, setShowMessageEdited] = useState(false);
 
   // ----------------------------
   // Firestore listener (devices)
@@ -212,12 +226,38 @@ const Devices_contents = ({ isAdmin }) => {
     handleEdit(deviceInMeters, setEditingDevice, setEditData);
   };
 
- 
+  // Enhanced delete handler with notifications
+  const handleDeleteWithNotification = async (deviceId) => {
+    try {
+      await handleDelete(deviceId);
+      setShowDeleteDeviceSuccess(true);
+      setTimeout(() => setShowDeleteDeviceSuccess(false), 4000);
+    } catch (error) {
+      console.error("Delete failed:", error);
+      setShowDeleteDeviceFailed(true);
+      setTimeout(() => setShowDeleteDeviceFailed(false), 4000);
+    }
+  };
+
+  // Enhanced edit submit handler with notifications
+  const handleEditSubmitWithNotification = async (e, editingDevice, editData, setEditingDevice) => {
+    e.preventDefault();
+    try {
+      await handleEditSubmit(e, editingDevice, editData, setEditingDevice);
+      setShowEditDeviceSuccess(true);
+      setTimeout(() => setShowEditDeviceSuccess(false), 4000);
+    } catch (error) {
+      console.error("Edit failed:", error);
+      setShowEditDeviceFailed(true);
+      setTimeout(() => setShowEditDeviceFailed(false), 4000);
+    }
+  };
+
   return (
     <>
       {/* Manual SMS notifications */}
-      {showSmsAlert && <SmsAlertSuccess />}
-      {showSmsAlertFailed && <SmsAlertFailed />}
+      {showSmsAlert && <SmsAlertSuccess onClose={() => setShowSmsAlert(false)} />}
+      {showSmsAlertFailed && <SmsAlertFailed onClose={() => setShowSmsAlertFailed(false)} />}
 
       {/* Auto SMS notification */}
       {autoSmsAlert && (
@@ -227,6 +267,13 @@ const Devices_contents = ({ isAdmin }) => {
           onClose={() => setAutoSmsAlert(null)}
         />
       )}
+
+      {/* NEW: Device Edit/Delete notifications */}
+      {showEditDeviceSuccess && <EditDeviceSuccess onClose={() => setShowEditDeviceSuccess(false)} />}
+      {showEditDeviceFailed && <EditDeviceFailed onClose={() => setShowEditDeviceFailed(false)} />}
+      {showDeleteDeviceSuccess && <DeleteDeviceSuccess onClose={() => setShowDeleteDeviceSuccess(false)} />}
+      {showDeleteDeviceFailed && <DeleteDeviceFailed onClose={() => setShowDeleteDeviceFailed(false)} />}
+      {showMessageEdited && <MessageEditedSuccess onClose={() => setShowMessageEdited(false)} />}
 
       <div className="devices-contents"></div>
 
@@ -282,11 +329,12 @@ const Devices_contents = ({ isAdmin }) => {
 
                   {isAdmin && (
                     <>
-                      {/* 🔹 EDIT ALERT TEMPLATE BUTTON */}
                       <button
                         className="edit-notify-btn"
                         title="Edit notification template"
-                        onClick={() => setShowEditAlertTemplate(true)}
+                        onClick={() => {
+                          setShowEditAlertTemplate(true);
+                        }}
                       >
                         <MdOutlineEditNotifications />
                       </button>
@@ -317,7 +365,7 @@ const Devices_contents = ({ isAdmin }) => {
 
                       <button
                         className="delete-btn"
-                        onClick={() => handleDelete(device.id)}
+                        onClick={() => handleDeleteWithNotification(device.id)}
                       >
                         <MdDeleteOutline />
                       </button>
@@ -415,7 +463,7 @@ const Devices_contents = ({ isAdmin }) => {
         })}
       </div>
 
-      {/* 🔹 Historical Data Modal */}
+      {/* Historical Data Modal */}
       {historicalModalSensor && (
         <HistoricalDataModal
           sensorId={historicalModalSensor}
@@ -423,10 +471,15 @@ const Devices_contents = ({ isAdmin }) => {
         />
       )}
 
-      {/* 🔹 EDIT ALERT TEMPLATE MODAL */}
+      {/* Edit Alert Template Modal */}
       {showEditAlertTemplate && (
         <EditAlertTemplateModal
-          onClose={() => setShowEditAlertTemplate(false)}
+          onClose={() => {
+            setShowEditAlertTemplate(false);
+            // Show success notification after closing
+            setShowMessageEdited(true);
+            setTimeout(() => setShowMessageEdited(false), 4000);
+          }}
         />
       )}
 
@@ -440,7 +493,7 @@ const Devices_contents = ({ isAdmin }) => {
             <h2>Edit Device Metadata</h2>
             <form
               onSubmit={(e) =>
-                handleEditSubmit(e, editingDevice, editData, setEditingDevice)
+                handleEditSubmitWithNotification(e, editingDevice, editData, setEditingDevice)
               }
             >
               <label className="sensor-label">

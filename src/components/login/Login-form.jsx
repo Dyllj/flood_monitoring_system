@@ -3,9 +3,13 @@ import { useState } from "react";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../../auth/firebase_auth";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
+import LoginSuccess from "../custom-notification/for-login/login-success";
+import LoginFailed from "../custom-notification/for-login/login-failed";
 
 const LoginForm = ({ onClose, setIsAdmin }) => {
   const [showPassword, setShowPassword] = useState(false);
+  const [showLoginSuccess, setShowLoginSuccess] = useState(false);
+  const [showLoginFailed, setShowLoginFailed] = useState(false);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -17,51 +21,63 @@ const LoginForm = ({ onClose, setIsAdmin }) => {
       console.log("Logged in:", userCredential.user);
 
       if (email === "molave.mdrrmo@gmail.com") {
-        setIsAdmin(true); // trigger success card
+        setIsAdmin(true);
+        setShowLoginSuccess(true);
+        
+        // Auto-hide success notification and close form
+        setTimeout(() => {
+          setShowLoginSuccess(false);
+          onClose();
+        }, 3000);
       } else {
-        alert("You are logged in, but not an admin.");
+        setShowLoginFailed(true);
+        setTimeout(() => setShowLoginFailed(false), 4000);
       }
-
-      // Close form **after setting admin state**
-      onClose();
     } catch (error) {
       console.error("Login failed:", error.message);
-      alert("Invalid email or password.");
+      setShowLoginFailed(true);
+      setTimeout(() => setShowLoginFailed(false), 4000);
     }
   };
 
   return (
-    <div className="login-form">
-      <h2 id="login-title">Admin Login</h2>
-      <form onSubmit={handleLogin}>
-        <label>
-          Email:
-          <input type="email" name="username" required />
-        </label>
+    <>
+      {/* Notifications */}
+      {showLoginSuccess && <LoginSuccess onClose={() => setShowLoginSuccess(false)} />}
+      {showLoginFailed && <LoginFailed onClose={() => setShowLoginFailed(false)} />}
 
-        <label className="password-label">
-          Password:
-          <div className="password-wrapper">
-            <input
-              type={showPassword ? "text" : "password"}
-              name="password"
-              required
-            />
-            <span
-              className="toggle-password"
-              onClick={() => setShowPassword(!showPassword)}
-            >
-              {showPassword ? <FaEyeSlash /> : <FaEye />}
-            </span>
+      <div className="login-form">
+        <h2 id="login-title">Admin Login</h2>
+        <form onSubmit={handleLogin}>
+          <label>
+            Email:
+            <input type="email" name="username" required />
+          </label>
+
+          <label className="password-label">
+            Password:
+            <div className="password-wrapper">
+              <input
+                type={showPassword ? "text" : "password"}
+                name="password"
+                required
+              />
+              <span
+                className="toggle-password"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? <FaEyeSlash /> : <FaEye />}
+              </span>
+            </div>
+          </label>
+
+          <div className="login-actions">
+            <button type="submit" id="login-button">Login</button>
+            <button type="button" id="cancel-button" onClick={onClose}>Cancel</button>
           </div>
-        </label>
-
-        <div className="login-actions">
-          <button type="submit" id="login-button">Login</button>
-          <button type="button" id="cancel-button" onClick={onClose}>Cancel</button>
-        </div>
-      </form>
-    </div>
+        </form>
+      </div>
+    </>
   );
 };
 

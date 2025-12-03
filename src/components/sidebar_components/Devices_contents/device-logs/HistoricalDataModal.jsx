@@ -27,6 +27,10 @@ import { useEnlargeChart } from "./useEnlargeChart";
 import EnlargedChartModal from "./EnlargeChartModal";
 import { createPortal } from "react-dom";
 
+// Import report generation success notifications
+import GenerateReportHistoricalData from "../../../custom-notification/for-generate-report/for-generate-historicalData-report";
+import GenerateReportTableHistoricalData from "../../../custom-notification/for-generate-report/for-generate-tableHistoricalData-report";
+
 // Custom Tooltip Component
 const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
@@ -52,6 +56,10 @@ const HistoricalDataModal = ({ sensorId, onClose }) => {
   const [loading, setLoading] = useState(true);
   const [maxMetadata, setMaxMetadata] = useState({});
   const [generatingReport, setGeneratingReport] = useState(false);
+
+  // NEW: Report generation notifications
+  const [showReportSuccess, setShowReportSuccess] = useState(false);
+  const [showTableReportSuccess, setShowTableReportSuccess] = useState(false);
 
   // Use custom hook for enlargement
   const { enlargedChart, openEnlargedView, closeEnlargedView } = useEnlargeChart();
@@ -187,7 +195,7 @@ const HistoricalDataModal = ({ sensorId, onClose }) => {
     fetchAllLogs();
   }, [sensorId]);
 
-  // Generate MDRRMO Report
+  // Generate MDRRMO Report with notification
   const handleGenerateReport = async () => {
     if (fullLogs.length === 0) {
       alert("No data available to generate report.");
@@ -204,7 +212,8 @@ const HistoricalDataModal = ({ sensorId, onClose }) => {
         filterStart,
         filterEnd
       );
-      alert("Report generated successfully!");
+      setShowReportSuccess(true);
+      setTimeout(() => setShowReportSuccess(false), 4000);
     } catch (error) {
       console.error("Error generating report:", error);
       alert("Failed to generate report. Please try again.");
@@ -213,7 +222,7 @@ const HistoricalDataModal = ({ sensorId, onClose }) => {
     }
   };
 
-  // Generate Table Report
+  // Generate Table Report with notification
   const handleGenerateTableReport = async () => {
     if (filteredTableLogs.length === 0) {
       alert("No table data available to generate report.");
@@ -222,7 +231,8 @@ const HistoricalDataModal = ({ sensorId, onClose }) => {
 
     try {
       await generateTableReport(sensorId, filteredTableLogs, maxMetadata);
-      alert("Table report generated successfully!");
+      setShowTableReportSuccess(true);
+      setTimeout(() => setShowTableReportSuccess(false), 4000);
     } catch (error) {
       console.error("Error generating table report:", error);
       alert("Failed to generate table report. Please try again.");
@@ -379,6 +389,10 @@ const HistoricalDataModal = ({ sensorId, onClose }) => {
 
   return (
     <>
+      {/* Report generation success notifications */}
+      {showReportSuccess && <GenerateReportHistoricalData onClose={() => setShowReportSuccess(false)} />}
+      {showTableReportSuccess && <GenerateReportTableHistoricalData onClose={() => setShowTableReportSuccess(false)} />}
+
       <div className="modal-overlay" id="historical-data-overlay" onClick={onClose}>
         <div className="modal-container" id="historical-data-container" onClick={(e) => e.stopPropagation()}>
           <HiMiniXMark className="modal-close-icon" onClick={onClose} />
